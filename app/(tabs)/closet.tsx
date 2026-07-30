@@ -1,16 +1,18 @@
+import { Ionicons } from '@expo/vector-icons';
+import { SerifText, Text, TextInput } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
 import { CATEGORY_ORDER, ClosetItem, Product, costPerWear } from '@/lib/types';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Modal, Pressable, StyleSheet,
-  Text, TextInput, View,
+  ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, View,
 } from 'react-native';
 
 const PLUM = '#5B2333';
 const BG = '#FAF6F2';
 const BORDER = '#E9E1DC';
 const INK = '#231F20';
+const INK_SOFT = '#6B615F';
 const PLACEHOLDER = '#8A8078';
 
 export default function ClosetScreen() {
@@ -18,6 +20,7 @@ export default function ClosetScreen() {
   const [items, setItems] = useState<ClosetItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
+  const [emptyOpen, setEmptyOpen] = useState(false);
 
   const loadCloset = useCallback(async () => {
     setLoading(true);
@@ -40,13 +43,14 @@ export default function ClosetScreen() {
   const grouped = CATEGORY_ORDER
     .map(cat => ({ cat, items: items.filter(i => i.product.category === cat && i.status !== 'empty') }))
     .filter(g => g.items.length > 0);
+  const emptyItems = items.filter(i => i.status === 'empty');
 
   if (loading) return <View style={styles.center}><ActivityIndicator color={PLUM} /></View>;
 
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <Text style={styles.title}>your closet</Text>
+        <SerifText style={styles.title}>your closet</SerifText>
         <Pressable style={styles.addBtn} onPress={() => setAddOpen(true)}>
           <Text style={styles.addBtnText}>+ add product</Text>
         </Pressable>
@@ -58,7 +62,7 @@ export default function ClosetScreen() {
         contentContainerStyle={{ padding: 16 }}
         renderItem={({ item: group }) => (
           <View style={{ marginBottom: 12 }}>
-            <Text style={styles.categoryTitle}>{group.cat}</Text>
+            <SerifText style={styles.categoryTitle}>{group.cat}</SerifText>
             {group.items.map(item => (
               <Pressable key={item.id} style={styles.itemRow} onPress={() => router.push(`/product/${item.id}`)}>
                 <View style={[styles.swatch, { backgroundColor: item.color || item.product.default_color }]} />
@@ -74,7 +78,30 @@ export default function ClosetScreen() {
           </View>
         )}
         ListEmptyComponent={
-          <Text style={styles.empty}>nothing in your closet yet — add your first product.</Text>
+          grouped.length === 0 ? <Text style={styles.empty}>nothing in your closet yet — add your first product.</Text> : null
+        }
+        ListFooterComponent={
+          <View>
+            <Pressable style={styles.toggleRow} onPress={() => setEmptyOpen(o => !o)}>
+              <SerifText style={styles.sectionTitle}>empty products ({emptyItems.length})</SerifText>
+              <Ionicons name={emptyOpen ? 'chevron-up' : 'chevron-down'} size={16} color={INK_SOFT} />
+            </Pressable>
+            {emptyOpen && (
+              emptyItems.length > 0 ? emptyItems.map(item => (
+                <Pressable key={item.id} style={styles.itemRow} onPress={() => router.push(`/product/${item.id}`)}>
+                  <View style={[styles.swatch, { backgroundColor: item.color || item.product.default_color }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.itemName}>{item.product.brand} — {item.product.name}</Text>
+                    <Text style={styles.itemSub}>
+                      {item.last_used || `worn ${item.times_worn} times`}
+                      {costPerWear(item) ? ` · $${costPerWear(item)}/wear` : ''}
+                    </Text>
+                  </View>
+                  <View style={styles.emptyPill}><Text style={styles.emptyPillText}>empty</Text></View>
+                </Pressable>
+              )) : <Text style={styles.empty}>nothing finished yet — log a product when you use it up.</Text>
+            )}
+          </View>
         }
       />
 
@@ -152,7 +179,7 @@ function AddProductModal({ visible, onClose, onAdded }: {
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View style={styles.modal}>
-        <Text style={styles.modalTitle}>add a product</Text>
+        <SerifText style={styles.modalTitle}>add a product</SerifText>
 
         <TextInput
           style={styles.input}
@@ -229,6 +256,10 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 13, fontWeight: '600' },
   itemSub: { fontSize: 11, color: '#6B615F', marginTop: 2 },
   empty: { textAlign: 'center', color: '#6B615F', padding: 40 },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 8 },
+  sectionTitle: { fontSize: 15 },
+  emptyPill: { backgroundColor: BORDER, borderRadius: 20, paddingVertical: 3, paddingHorizontal: 8, flexShrink: 0 },
+  emptyPillText: { fontSize: 10, fontWeight: '600', color: '#6B615F' },
   modal: { flex: 1, padding: 20, backgroundColor: BG },
   modalTitle: { fontSize: 18, fontWeight: '600', marginBottom: 16 },
   input: { borderWidth: 1, borderColor: BORDER, borderRadius: 9, padding: 10, marginBottom: 8, backgroundColor: '#fff', color: INK },

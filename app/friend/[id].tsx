@@ -1,9 +1,10 @@
+import { SerifText, Text } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
 import { computeTwinScore } from '@/lib/twinScore';
 import { Look, Profile } from '@/lib/types';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, View } from 'react-native';
 
 const PLUM = '#5B2333';
 const BG = '#FAF6F2';
@@ -58,14 +59,14 @@ export default function FriendProfileScreen() {
               <Text style={styles.avatarText}>{profile.handle.slice(0, 2).toUpperCase()}</Text>
             </View>
             <View>
-              <Text style={styles.handle}>{profile.handle}</Text>
+              <SerifText style={styles.handle}>{profile.handle}</SerifText>
               {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
             </View>
           </View>
 
           {twin && (
             <View style={styles.twinCard}>
-              <Text style={styles.twinScore}>{twin.score}%</Text>
+              <SerifText style={styles.twinScore}>{twin.score}%</SerifText>
               <Text style={styles.twinLabel}>closet twins</Text>
               <Text style={styles.twinBreakdown}>
                 {twin.sharedCount} shared product{twin.sharedCount === 1 ? '' : 's'}
@@ -75,11 +76,16 @@ export default function FriendProfileScreen() {
             </View>
           )}
 
-          <Pressable style={styles.closetBtn} onPress={() => router.push(`/friend-closet/${id}`)}>
-            <Text style={styles.closetBtnText}>view closet</Text>
-          </Pressable>
+          <View style={styles.btnRow}>
+            <Pressable style={styles.closetBtn} onPress={() => router.push(`/friend-closet/${id}`)}>
+              <Text style={styles.closetBtnText}>view closet</Text>
+            </Pressable>
+            <Pressable style={styles.closetBtn} onPress={() => router.push({ pathname: '/rankings/[id]', params: { id: id as string, handle: profile.handle } })}>
+              <Text style={styles.closetBtnText}>rankings</Text>
+            </Pressable>
+          </View>
 
-          <Text style={styles.sectionTitle}>{profile.handle}'s looks</Text>
+          <SerifText style={styles.sectionTitle}>{profile.handle}'s looks</SerifText>
         </View>
       }
       renderItem={({ item }) => (
@@ -105,7 +111,8 @@ const styles = StyleSheet.create({
   twinScore: { fontSize: 32, fontWeight: '700', color: PLUM },
   twinLabel: { fontSize: 12, color: PLUM, fontWeight: '700', marginTop: 2, marginBottom: 8 },
   twinBreakdown: { fontSize: 11, color: '#6B4055', textAlign: 'center' },
-  closetBtn: { borderWidth: 1, borderColor: BORDER, borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginBottom: 16, backgroundColor: '#fff' },
+  btnRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  closetBtn: { flex: 1, borderWidth: 1, borderColor: BORDER, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: '#fff' },
   closetBtnText: { fontWeight: '600', fontSize: 13 },
   sectionTitle: { fontSize: 15, fontWeight: '700', marginBottom: 10 },
   lookTile: { flex: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 12, padding: 8, marginBottom: 10 },

@@ -1,9 +1,10 @@
+import { SerifText, Text, TextInput } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/lib/types';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, FlatList, Pressable, StyleSheet, View,
 } from 'react-native';
 
 const PLUM = '#5B2333';
@@ -127,7 +128,7 @@ export default function FriendsScreen() {
           ]}
           keyExtractor={(item, i) => 'header' in item ? item.header! + i : item.row!.id}
           renderItem={({ item }) => {
-            if ('header' in item) return <Text style={styles.sectionTitle}>{item.header}</Text>;
+            if ('header' in item) return <SerifText style={styles.sectionTitle}>{item.header}</SerifText>;
             const row = item.row!;
             const otherId = row.requester_id === myId ? row.addressee_id : row.requester_id;
             const profile = profiles[otherId];

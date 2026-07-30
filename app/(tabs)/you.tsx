@@ -1,5 +1,6 @@
+import { SerifText, Text, TextInput } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
-import { CATEGORY_ORDER, ClosetItem, Look } from '@/lib/types';
+import { CATEGORY_ORDER, ClosetItem, Look, Profile } from '@/lib/types';
 import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
@@ -7,7 +8,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator, FlatList, Image, Modal, Pressable,
-  ScrollView, StyleSheet, Text, TextInput, View,
+  ScrollView, StyleSheet, View,
 } from 'react-native';
 
 const PLUM = '#5B2333';
@@ -18,6 +19,7 @@ const INK = '#231F20';
 
 export default function YouScreen() {
   const router = useRouter();
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [closet, setCloset] = useState<ClosetItem[]>([]);
   const [looks, setLooks] = useState<Look[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,12 +30,19 @@ export default function YouScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
-    const [{ data: closetData, error: closetError }, { data: looksData, error: looksError }] = await Promise.all([
+    const [
+      { data: profileData, error: profileError },
+      { data: closetData, error: closetError },
+      { data: looksData, error: looksError },
+    ] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', user.id).single(),
       supabase.from('closet_items').select('*, product:products(*)').eq('user_id', user.id),
       supabase.from('looks').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
     ]);
+    if (profileError) console.log('Loading your profile failed:', profileError.message);
     if (closetError) console.log('Loading your closet failed:', closetError.message);
     if (looksError) console.log('Loading your looks failed:', looksError.message);
+    setProfile((profileData as Profile) || null);
     setCloset((closetData as unknown as ClosetItem[]) || []);
     setLooks((looksData as Look[]) || []);
     setLoading(false);
@@ -50,17 +59,37 @@ export default function YouScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={{ padding: 16 }}>
+        {profile && (
+          <View style={styles.profileHead}>
+            <View style={[styles.avatar, { backgroundColor: profile.avatar_color }]}>
+              <SerifText style={styles.avatarText}>{profile.handle.slice(0, 2).toUpperCase()}</SerifText>
+            </View>
+            <View style={{ flex: 1 }}>
+              <SerifText style={styles.displayName}>{profile.handle}</SerifText>
+              {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
+              <Text style={styles.username}>@{profile.handle}</Text>
+            </View>
+          </View>
+        )}
+
         <View style={styles.statGrid}>
-          <View style={styles.statCard}><Text style={styles.statNum}>{active.length}</Text><Text style={styles.statLabel}>in closet</Text></View>
-          <View style={styles.statCard}><Text style={styles.statNum}>{empty.length}</Text><Text style={styles.statLabel}>empties</Text></View>
-          <View style={styles.statCard}><Text style={styles.statNum} numberOfLines={1}>{mostWorn?.product.brand || '—'}</Text><Text style={styles.statLabel}>most worn</Text></View>
+          <View style={styles.statCard}><SerifText style={styles.statNum}>{active.length}</SerifText><Text style={styles.statLabel}>in closet</Text></View>
+          <View style={styles.statCard}><SerifText style={styles.statNum}>{empty.length}</SerifText><Text style={styles.statLabel}>empties</Text></View>
+          <View style={styles.statCard}><SerifText style={styles.statNum} numberOfLines={1}>{mostWorn?.product.brand || '—'}</SerifText><Text style={styles.statLabel}>most worn</Text></View>
         </View>
 
-        <Pressable style={styles.postBtn} onPress={() => setPostOpen(true)}>
-          <Text style={styles.postBtnText}>+ post a look</Text>
-        </Pressable>
+        <View style={styles.actionRow}>
+          {profile && (
+            <Pressable style={styles.actionBtn} onPress={() => router.push(`/rankings/${profile.id}`)}>
+              <Text style={styles.actionBtnText}>your rankings</Text>
+            </Pressable>
+          )}
+          <Pressable style={styles.actionBtn} onPress={() => setPostOpen(true)}>
+            <Text style={styles.actionBtnText}>+ post a look</Text>
+          </Pressable>
+        </View>
 
-        <Text style={styles.sectionTitle}>your looks</Text>
+        <SerifText style={styles.sectionTitle}>your looks</SerifText>
         <FlatList
           data={looks}
           keyExtractor={l => l.id}
@@ -147,7 +176,7 @@ function PostLookModal({ visible, closetItems, onClose, onPosted }: {
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <ScrollView style={styles.modal} contentContainerStyle={{ padding: 20 }}>
-        <Text style={styles.modalTitle}>post a look</Text>
+        <SerifText style={styles.modalTitle}>post a look</SerifText>
 
         <Pressable style={styles.photoPicker} onPress={pickImage}>
           {image ? <Image source={{ uri: image }} style={styles.photoPreview} /> : <Text style={styles.photoPickerText}>+ add a photo</Text>}
@@ -197,13 +226,20 @@ function PostLookModal({ visible, closetItems, onClose, onPosted }: {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: BG },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BG },
+  profileHead: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
+  avatar: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
+  avatarText: { color: '#fff', fontSize: 18 },
+  displayName: { fontSize: 20, color: INK },
+  bio: { fontSize: 12, color: '#6B615F', marginTop: 2 },
+  username: { fontSize: 12, color: '#6B615F', marginTop: 4, fontWeight: '600' },
   statGrid: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   statCard: { flex: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 12, padding: 12, alignItems: 'center' },
-  statNum: { fontSize: 17, fontWeight: '700', color: INK },
+  statNum: { fontSize: 17, color: INK },
   statLabel: { fontSize: 10, color: '#6B615F', marginTop: 2 },
-  postBtn: { borderWidth: 1, borderColor: BORDER, borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginBottom: 16, backgroundColor: '#fff' },
-  postBtnText: { fontWeight: '600', fontSize: 13 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', marginBottom: 10 },
+  actionRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  actionBtn: { flex: 1, borderWidth: 1, borderColor: BORDER, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: '#fff' },
+  actionBtnText: { fontWeight: '600', fontSize: 13 },
+  sectionTitle: { fontSize: 15, marginBottom: 10 },
   lookTile: { flex: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 12, padding: 8, marginBottom: 10 },
   lookImage: { width: '100%', aspectRatio: 1, borderRadius: 8, marginBottom: 6, backgroundColor: '#F1E1E5' },
   lookCaption: { fontSize: 11 },

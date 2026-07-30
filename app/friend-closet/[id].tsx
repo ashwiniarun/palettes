@@ -1,8 +1,9 @@
+import { SerifText, Text } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
 import { CATEGORY_ORDER, ClosetItem, costPerWear } from '@/lib/types';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 const PLUM = '#5B2333';
 const BG = '#FAF6F2';
@@ -42,7 +43,7 @@ export default function FriendClosetScreen() {
       keyExtractor={g => g.cat}
       renderItem={({ item: group }) => (
         <View style={{ marginBottom: 12 }}>
-          <Text style={styles.categoryTitle}>{group.cat}</Text>
+          <SerifText style={styles.categoryTitle}>{group.cat}</SerifText>
           {group.items.map(ci => (
             <Pressable key={ci.id} style={styles.itemRow} onPress={() => router.push(`/product/${ci.id}`)}>
               <View style={[styles.swatch, { backgroundColor: ci.color || ci.product.default_color }]} />

@@ -1,7 +1,8 @@
+import { SerifText, Text } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, View } from 'react-native';
 
 const PLUM = '#5B2333';
 const BG = '#FAF6F2';
@@ -48,7 +49,7 @@ export default function LookDetailScreen() {
       <Text style={styles.handle}>{look.poster.handle}</Text>
       <Text style={styles.caption}>{look.caption}</Text>
       <Image source={{ uri: look.photo_url }} style={styles.photo} />
-      <Text style={styles.sectionTitle}>products used</Text>
+      <SerifText style={styles.sectionTitle}>products used</SerifText>
       {look.look_products.map((lp, i) => (
         <View key={i} style={styles.productRow}>
           <Text style={styles.productName}>{lp.closet_item.product.brand} {lp.closet_item.product.name}</Text>

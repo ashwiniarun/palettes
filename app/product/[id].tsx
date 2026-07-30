@@ -1,9 +1,10 @@
+import { SerifText, Text, TextInput } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
 import { ClosetItem, Dupe, Product, costPerWear } from '@/lib/types';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-    ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+    ActivityIndicator, Pressable, ScrollView, StyleSheet, View,
 } from 'react-native';
 
 const PLUM = '#5B2333';
@@ -117,7 +118,7 @@ export default function ProductDetailScreen() {
       <View style={styles.head}>
         <View style={[styles.swatch, { backgroundColor: item.color || item.product.default_color }]} />
         <View>
-          <Text style={styles.title}>{item.product.brand} — {item.product.name}</Text>
+          <SerifText style={styles.title}>{item.product.brand} — {item.product.name}</SerifText>
           <Text style={styles.sub}>{item.product.category} · worn {item.times_worn} times{costPerWear(item) ? ` · $${costPerWear(item)}/wear` : ''}</Text>
         </View>
       </View>
@@ -132,7 +133,7 @@ export default function ProductDetailScreen() {
       )}
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>{isYours ? 'your rating' : 'rating'}</Text>
+        <SerifText style={styles.sectionTitle}>{isYours ? 'your rating' : 'rating'}</SerifText>
         {isYours ? (
           <>
             <View style={styles.starRow}>
@@ -163,7 +164,7 @@ export default function ProductDetailScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>{isYours ? "dupes you've logged" : 'logged dupes'}</Text>
+        <SerifText style={styles.sectionTitle}>{isYours ? "dupes you've logged" : 'logged dupes'}</SerifText>
         {dupes.length === 0 && <Text style={styles.emptyText}>{isYours ? "you haven't logged one yet." : 'no dupes logged.'}</Text>}
         {dupes.map(d => (
           <View key={d.id} style={styles.dupeRow}>
@@ -190,7 +191,7 @@ export default function ProductDetailScreen() {
         )}
       </View>
 
-      <Text style={styles.sectionTitle}>looks using this product</Text>
+      <SerifText style={styles.sectionTitle}>looks using this product</SerifText>
       {usedIn.length === 0 && <Text style={styles.emptyText}>no posted looks use this yet.</Text>}
       {usedIn.map(l => (
         <View key={l.look_id} style={styles.usedInRow}>

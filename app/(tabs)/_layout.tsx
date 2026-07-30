@@ -5,12 +5,15 @@ const PLUM = '#5B2333';
 
 export default function TabLayout() {
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: PLUM, headerTitleStyle: { fontWeight: '600' } }}>
+    <Tabs screenOptions={{
+      tabBarActiveTintColor: PLUM,
+      headerTitleStyle: { fontFamily: 'Fraunces_600SemiBold', fontSize: 22 },
+    }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Feed',
-          headerTitle: 'face tags',
+          headerTitle: 'palettes',
           tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} />,
         }}
       />
@@ -18,6 +21,7 @@ export default function TabLayout() {
         name="closet"
         options={{
           title: 'Closet',
+          headerTitle: 'palettes',
           tabBarIcon: ({ color, size }) => <Ionicons name="shirt-outline" size={size} color={color} />,
         }}
       />
@@ -25,6 +29,7 @@ export default function TabLayout() {
         name="friends"
         options={{
           title: 'Friends',
+          headerTitle: 'palettes',
           tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" size={size} color={color} />,
         }}
       />
@@ -32,6 +37,7 @@ export default function TabLayout() {
         name="you"
         options={{
           title: 'You',
+          headerTitle: 'palettes',
           tabBarIcon: ({ color, size }) => <Ionicons name="person-circle-outline" size={size} color={color} />,
         }}
       />

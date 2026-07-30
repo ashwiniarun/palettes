@@ -1,8 +1,9 @@
+import { Text } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
 import { FeedLook } from '@/lib/types';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View,
+  ActivityIndicator, FlatList, Image, Pressable, StyleSheet, View,
 } from 'react-native';
 
 const PLUM = '#5B2333';
