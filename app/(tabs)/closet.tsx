@@ -1,11 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
+import BarcodeScannerModal from '@/components/BarcodeScannerModal';
 import { SerifText, Text, TextInput } from '@/components/ThemedText';
+import { lookupBarcode } from '@/lib/barcodeLookup';
 import { supabase } from '@/lib/supabase';
+import { orIlike } from '@/lib/supabaseFilters';
 import { CATEGORY_ORDER, ClosetItem, Product, costPerWear } from '@/lib/types';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, View,
+  ActivityIndicator, FlatList, Modal, Pressable, ScrollView, StyleSheet, View,
 } from 'react-native';
 
 const PLUM = '#5B2333';
@@ -38,7 +41,7 @@ export default function ClosetScreen() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { loadCloset(); }, [loadCloset]);
+  useFocusEffect(useCallback(() => { loadCloset(); }, [loadCloset]));
 
   const grouped = CATEGORY_ORDER
     .map(cat => ({ cat, items: items.filter(i => i.product.category === cat && i.status !== 'empty') }))
@@ -126,6 +129,40 @@ function AddProductModal({ visible, onClose, onAdded }: {
   const [newCategory, setNewCategory] = useState<typeof CATEGORY_ORDER[number]>('face');
   const [price, setPrice] = useState('');
   const [saving, setSaving] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
+  const [matchedFromScan, setMatchedFromScan] = useState(false);
+
+  async function handleBarcodeScanned(code: string) {
+    setScannerOpen(false);
+    setScanLoading(true);
+
+    const { data: existing, error } = await supabase
+      .from('products').select('*').eq('barcode', code).maybeSingle();
+    if (error) console.log('Barcode lookup in catalog failed:', error.message);
+
+    if (existing) {
+      setSelected(existing as Product);
+      setQuery(`${existing.brand} — ${existing.name}`);
+      setResults([]);
+      setMatchedFromScan(true);
+      setScanLoading(false);
+      return;
+    }
+
+    setScannedBarcode(code);
+    setSelected(null);
+    setMatchedFromScan(false);
+    const lookup = await lookupBarcode(code);
+    if (lookup) {
+      setNewBrand(lookup.brand);
+      setNewName(lookup.name);
+      if (lookup.category) setNewCategory(lookup.category);
+      if (lookup.brand && lookup.name) setQuery(`${lookup.brand} — ${lookup.name}`);
+    }
+    setScanLoading(false);
+  }
 
   useEffect(() => {
     if (!query.trim()) { setResults([]); return; }
@@ -133,7 +170,7 @@ function AddProductModal({ visible, onClose, onAdded }: {
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .or(`brand.ilike.%${query}%,name.ilike.%${query}%`)
+        .or(orIlike(['brand', 'name'], query))
         .limit(8);
       if (error) console.log('Product search failed:', error.message);
       setResults((data as Product[]) || []);
@@ -152,7 +189,7 @@ function AddProductModal({ visible, onClose, onAdded }: {
       const fullName = newShade.trim() ? `${newName.trim()} · ${newShade.trim()}` : newName.trim();
       const { data: newProduct, error } = await supabase
         .from('products')
-        .insert({ brand: newBrand.trim(), name: fullName, category: newCategory })
+        .insert({ brand: newBrand.trim(), name: fullName, category: newCategory, barcode: scannedBarcode })
         .select()
         .single();
       if (error || !newProduct) {
@@ -161,6 +198,11 @@ function AddProductModal({ visible, onClose, onAdded }: {
         return;
       }
       productId = newProduct.id;
+    } else if (scannedBarcode && selected && !selected.barcode) {
+      // Backfill the barcode onto a product that already existed but hadn't been scanned before —
+      // so the next person to scan this exact item gets an instant match.
+      const { error } = await supabase.from('products').update({ barcode: scannedBarcode }).eq('id', productId);
+      if (error) console.log('Backfilling barcode failed:', error.message);
     }
 
     const { error: closetError } = await supabase.from('closet_items').insert({
@@ -172,37 +214,62 @@ function AddProductModal({ visible, onClose, onAdded }: {
     if (closetError) console.log('Closet insert failed:', closetError.message);
 
     setSaving(false);
-    setQuery(''); setSelected(null); setNewBrand(''); setNewName(''); setNewShade(''); setPrice('');
+    setQuery(''); setSelected(null); setNewBrand(''); setNewName(''); setNewShade(''); setPrice(''); setScannedBarcode(null);
     onAdded();
   }
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <View style={styles.modal}>
+      <ScrollView style={styles.modal} contentContainerStyle={{ padding: 20 }}>
         <SerifText style={styles.modalTitle}>add a product</SerifText>
 
-        <TextInput
-          style={styles.input}
-          placeholder="search brand or product..."
-          placeholderTextColor={PLACEHOLDER}
-          value={query}
-          onChangeText={t => { setQuery(t); setSelected(null); }}
-        />
+        <View style={styles.searchRow}>
+          <TextInput
+            style={[styles.input, { flex: 1, marginBottom: 0 }]}
+            placeholder="search brand or product..."
+            placeholderTextColor={PLACEHOLDER}
+            value={query}
+            onChangeText={t => { setQuery(t); setSelected(null); setMatchedFromScan(false); }}
+          />
+          <Pressable style={styles.scanBtn} onPress={() => setScannerOpen(true)}>
+            <Ionicons name="barcode-outline" size={20} color="#fff" />
+          </Pressable>
+        </View>
+        {scanLoading && (
+          <View style={styles.scanLoadingRow}>
+            <ActivityIndicator size="small" color={PLUM} />
+            <Text style={styles.scanLoadingText}>looking up barcode...</Text>
+          </View>
+        )}
+        {scannedBarcode && !scanLoading && (
+          <Text style={styles.scanLoadingText}>barcode {scannedBarcode} will be saved with this product.</Text>
+        )}
+        {matchedFromScan && selected && !scanLoading && (
+          <View style={styles.matchBanner}>
+            <Text style={styles.matchBannerText}>
+              matched <Text style={{ fontWeight: '700' }}>{selected.brand} — {selected.name}</Text> from a previous scan — already in the catalog, so brand/name/category are locked in. just add a price below if you want one.
+            </Text>
+          </View>
+        )}
 
         {results.map(p => (
           <Pressable
             key={p.id}
             style={styles.resultRow}
-            onPress={() => { setSelected(p); setQuery(`${p.brand} — ${p.name}`); setResults([]); }}
+            onPress={() => { setSelected(p); setQuery(`${p.brand} — ${p.name}`); setResults([]); setMatchedFromScan(false); }}
           >
             <Text>{p.brand} — {p.name}</Text>
             <Text style={styles.resultCategory}>{p.category}</Text>
           </Pressable>
         ))}
 
-        {!selected && query.trim().length > 1 && (
+        {!selected && (query.trim().length > 1 || !!scannedBarcode) && (
           <View style={styles.newProductBox}>
-            <Text style={styles.newProductLabel}>no exact match — add it as new:</Text>
+            <Text style={styles.newProductLabel}>
+              {scannedBarcode && !newBrand && !newName
+                ? "couldn't find this barcode anywhere — add it as new:"
+                : 'no exact match — add it as new:'}
+            </Text>
             <TextInput style={styles.input} placeholder="brand" placeholderTextColor={PLACEHOLDER} value={newBrand} onChangeText={setNewBrand} />
             <TextInput style={styles.input} placeholder="product name" placeholderTextColor={PLACEHOLDER} value={newName} onChangeText={setNewName} />
             <TextInput style={styles.input} placeholder="shade (optional)" placeholderTextColor={PLACEHOLDER} value={newShade} onChangeText={setNewShade} />
@@ -237,8 +304,14 @@ function AddProductModal({ visible, onClose, onAdded }: {
           <Text style={styles.saveBtnText}>{saving ? 'adding...' : 'add to closet'}</Text>
         </Pressable>
 
-        <Pressable onPress={onClose}><Text style={styles.cancelText}>cancel</Text></Pressable>
-      </View>
+        <Pressable onPress={() => { setScannedBarcode(null); onClose(); }}><Text style={styles.cancelText}>cancel</Text></Pressable>
+      </ScrollView>
+
+      <BarcodeScannerModal
+        visible={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScanned={handleBarcodeScanned}
+      />
     </Modal>
   );
 }
@@ -260,9 +333,15 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 15 },
   emptyPill: { backgroundColor: BORDER, borderRadius: 20, paddingVertical: 3, paddingHorizontal: 8, flexShrink: 0 },
   emptyPillText: { fontSize: 10, fontWeight: '600', color: '#6B615F' },
-  modal: { flex: 1, padding: 20, backgroundColor: BG },
+  modal: { flex: 1, backgroundColor: BG },
   modalTitle: { fontSize: 18, fontWeight: '600', marginBottom: 16 },
   input: { borderWidth: 1, borderColor: BORDER, borderRadius: 9, padding: 10, marginBottom: 8, backgroundColor: '#fff', color: INK },
+  searchRow: { flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 8 },
+  scanBtn: { backgroundColor: PLUM, borderRadius: 9, width: 42, height: 42, justifyContent: 'center', alignItems: 'center' },
+  scanLoadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  scanLoadingText: { fontSize: 11, color: '#6B615F', marginBottom: 8 },
+  matchBanner: { backgroundColor: '#E7EBE0', borderRadius: 9, padding: 10, marginBottom: 8 },
+  matchBannerText: { fontSize: 11, color: '#4A5240' },
   resultRow: { flexDirection: 'row', justifyContent: 'space-between', padding: 10, backgroundColor: '#fff', borderRadius: 8, marginBottom: 4 },
   resultCategory: { color: '#6B615F', fontSize: 11 },
   newProductBox: { marginBottom: 8 },

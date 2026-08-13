@@ -1,4 +1,5 @@
 import { SerifText, Text, TextInput } from '@/components/ThemedText';
+import { resizeForUpload } from '@/lib/imageResize';
 import { supabase } from '@/lib/supabase';
 import { CATEGORY_ORDER, ClosetItem, Look, Profile } from '@/lib/types';
 import { decode } from 'base64-arraybuffer';
@@ -7,7 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Image, Modal, Pressable,
+  ActivityIndicator, Alert, FlatList, Image, Modal, Pressable,
   ScrollView, StyleSheet, View,
 } from 'react-native';
 
@@ -124,13 +125,44 @@ function PostLookModal({ visible, closetItems, onClose, onPosted }: {
   const [caption, setCaption] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [processingPhoto, setProcessingPhoto] = useState(false);
 
-  async function pickImage() {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
+  async function handlePicked(result: ImagePicker.ImagePickerResult) {
+    if (result.canceled) return;
+    setProcessingPhoto(true);
+    const resized = await resizeForUpload(result.assets[0].uri);
+    setImage(resized);
+    setProcessingPhoto(false);
+  }
+
+  async function takePhoto() {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) return;
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
     });
-    if (!result.canceled) setImage(result.assets[0].uri);
+    await handlePicked(result);
+  }
+
+  async function pickFromLibrary() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    await handlePicked(result);
+  }
+
+  function choosePhoto() {
+    Alert.alert('add a photo', undefined, [
+      { text: 'take photo', onPress: takePhoto },
+      { text: 'choose from library', onPress: pickFromLibrary },
+      { text: 'cancel', style: 'cancel' },
+    ]);
   }
 
   function toggleProduct(id: string) {
@@ -145,12 +177,11 @@ function PostLookModal({ visible, closetItems, onClose, onPosted }: {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
 
-    const fileExt = image.split('.').pop();
-    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+    const fileName = `${user.id}/${Date.now()}.jpg`;
     const base64 = await FileSystem.readAsStringAsync(image, { encoding: FileSystem.EncodingType.Base64 });
     const { error: uploadError } = await supabase.storage
       .from('look-photos')
-      .upload(fileName, decode(base64), { contentType: `image/${fileExt}` });
+      .upload(fileName, decode(base64), { contentType: 'image/jpeg' });
 
     if (uploadError) { console.log('Photo upload failed:', uploadError.message); setSaving(false); return; }
 
@@ -178,9 +209,18 @@ function PostLookModal({ visible, closetItems, onClose, onPosted }: {
       <ScrollView style={styles.modal} contentContainerStyle={{ padding: 20 }}>
         <SerifText style={styles.modalTitle}>post a look</SerifText>
 
-        <Pressable style={styles.photoPicker} onPress={pickImage}>
-          {image ? <Image source={{ uri: image }} style={styles.photoPreview} /> : <Text style={styles.photoPickerText}>+ add a photo</Text>}
+        <Pressable style={styles.photoPicker} onPress={choosePhoto} disabled={processingPhoto}>
+          {processingPhoto ? (
+            <ActivityIndicator color={PLUM} />
+          ) : image ? (
+            <Image source={{ uri: image }} style={styles.photoPreview} />
+          ) : (
+            <Text style={styles.photoPickerText}>+ add a photo</Text>
+          )}
         </Pressable>
+        {image && !processingPhoto && (
+          <Pressable onPress={choosePhoto}><Text style={styles.retakeText}>retake / choose different photo</Text></Pressable>
+        )}
 
         <TextInput
           style={styles.input}
@@ -247,9 +287,10 @@ const styles = StyleSheet.create({
   empty: { textAlign: 'center', color: '#6B615F', padding: 30 },
   modal: { flex: 1, backgroundColor: BG },
   modalTitle: { fontSize: 18, fontWeight: '600', marginBottom: 16 },
-  photoPicker: { height: 160, borderWidth: 1, borderColor: BORDER, borderStyle: 'dashed', borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12, backgroundColor: '#fff' },
+  photoPicker: { width: '100%', aspectRatio: 1, borderWidth: 1, borderColor: BORDER, borderStyle: 'dashed', borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 8, backgroundColor: '#fff' },
   photoPickerText: { color: '#6B615F' },
   photoPreview: { width: '100%', height: '100%', borderRadius: 12 },
+  retakeText: { fontSize: 11, color: '#6B615F', textAlign: 'center', marginTop: -4, marginBottom: 10 },
   input: { borderWidth: 1, borderColor: BORDER, borderRadius: 9, padding: 10, marginBottom: 12, backgroundColor: '#fff', minHeight: 44, color: INK },
   tagCount: { fontSize: 11, color: '#6B615F', marginBottom: 8 },
   catLabel: { fontSize: 11, fontWeight: '700', color: PLUM, textTransform: 'uppercase', marginTop: 10, marginBottom: 6 },

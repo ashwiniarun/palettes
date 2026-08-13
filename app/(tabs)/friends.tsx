@@ -1,7 +1,7 @@
 import { SerifText, Text, TextInput } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/lib/types';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator, FlatList, Pressable, StyleSheet, View,
@@ -48,7 +48,7 @@ export default function FriendsScreen() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   // Live search against the profiles table
   useEffect(() => {

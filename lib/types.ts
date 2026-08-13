@@ -11,6 +11,7 @@ export type Product = {
   name: string;
   category: Category;
   default_color: string;
+  barcode: string | null;
 };
 
 export type ClosetItem = {

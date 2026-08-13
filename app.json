@@ -33,6 +33,19 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Palettes uses your camera to scan product barcodes so you can add them to your closet faster."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Palettes uses your photo library so you can post a look.",
+          "cameraPermission": "Palettes uses your camera so you can take a photo for a look."
+        }
       ]
     ],
     "experiments": {

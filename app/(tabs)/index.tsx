@@ -1,7 +1,8 @@
 import { Text } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
 import { FeedLook } from '@/lib/types';
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator, FlatList, Image, Pressable, StyleSheet, View,
 } from 'react-native';
@@ -80,7 +81,7 @@ export default function FeedScreen() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   async function toggleLike(lookId: string) {
     const { data: { user } } = await supabase.auth.getUser();

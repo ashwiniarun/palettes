@@ -22,12 +22,15 @@ create table products (
   name text not null,           -- e.g. "cream blush · petal"
   category text not null,       -- skincare, base, face, contour, blush, eyes, brow, lips, setting spray
   default_color text default '#D4A5A5',
+  barcode text,                 -- UPC/EAN from barcode scan, so a scan skips search entirely next time
   created_at timestamptz default now()
 );
 -- DB-level guard against exact duplicate rows — Postgres table constraints
 -- can't take expressions like lower(), so this has to be a unique index
 -- instead of `unique(...)` inside the table definition above.
 create unique index idx_products_brand_name_unique on products (lower(brand), lower(name));
+-- partial index (not all products have a barcode) so barcode lookups stay O(1) as the catalog grows
+create unique index idx_products_barcode_unique on products (barcode) where barcode is not null;
 -- trigram index so "search as you type" (ilike '%rare beauty%') stays fast as the catalog grows
 create extension if not exists pg_trgm;
 create index idx_products_brand_trgm on products using gin (brand gin_trgm_ops);
@@ -141,3 +144,7 @@ create policy "manage own looks" on looks
   for all using (user_id = auth.uid());
 
 -- (Repeat the same self-or-friend pattern for dupes, look_products, likes as you build them out.)
+
+-- ── Migration: barcode scanning (run this once against an existing DB) ──────
+-- alter table products add column if not exists barcode text;
+-- create unique index if not exists idx_products_barcode_unique on products (barcode) where barcode is not null;

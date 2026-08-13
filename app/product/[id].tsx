@@ -1,10 +1,11 @@
 import { SerifText, Text, TextInput } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
-import { ClosetItem, Dupe, Product, costPerWear } from '@/lib/types';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { orIlike } from '@/lib/supabaseFilters';
+import { CATEGORY_ORDER, ClosetItem, Dupe, Product, costPerWear } from '@/lib/types';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-    ActivityIndicator, Pressable, ScrollView, StyleSheet, View,
+    ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, View,
 } from 'react-native';
 
 const PLUM = '#5B2333';
@@ -19,6 +20,7 @@ type UsedInLook = { look_id: string; caption: string; poster_handle: string };
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const [item, setItem] = useState<ClosetItem | null>(null);
   const [isYours, setIsYours] = useState(false);
   const [dupes, setDupes] = useState<Dupe[]>([]);
@@ -28,6 +30,13 @@ export default function ProductDetailScreen() {
   const [review, setReview] = useState('');
   const [dupeQuery, setDupeQuery] = useState('');
   const [dupeResults, setDupeResults] = useState<Product[]>([]);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editBrand, setEditBrand] = useState('');
+  const [editName, setEditName] = useState('');
+  const [editShade, setEditShade] = useState('');
+  const [editCategory, setEditCategory] = useState<typeof CATEGORY_ORDER[number]>('face');
+  const [editPrice, setEditPrice] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -89,10 +98,64 @@ export default function ProductDetailScreen() {
     else load();
   }
 
+  function openEdit() {
+    if (!item) return;
+    const [namePart, shadePart] = item.product.name.split('·').map(s => s.trim());
+    setEditBrand(item.product.brand);
+    setEditName(namePart || item.product.name);
+    setEditShade(shadePart || '');
+    setEditCategory(item.product.category);
+    setEditPrice(item.price != null ? String(item.price) : '');
+    setEditOpen(true);
+  }
+
+  async function saveEdit() {
+    if (!item) return;
+    setSavingEdit(true);
+    const fullName = editShade.trim() ? `${editName.trim()} · ${editShade.trim()}` : editName.trim();
+
+    const { error: productError } = await supabase
+      .from('products')
+      .update({ brand: editBrand.trim(), name: fullName, category: editCategory })
+      .eq('id', item.product_id);
+    if (productError) console.log('Updating product failed:', productError.message);
+
+    const { error: closetError } = await supabase
+      .from('closet_items')
+      .update({ price: editPrice ? parseFloat(editPrice) : null })
+      .eq('id', item.id);
+    if (closetError) console.log('Updating closet item failed:', closetError.message);
+
+    setSavingEdit(false);
+    setEditOpen(false);
+    load();
+  }
+
+  function confirmDelete() {
+    const usedInCount = usedIn.length;
+    Alert.alert(
+      'delete this product?',
+      usedInCount > 0
+        ? `this will also remove it from ${usedInCount} posted look${usedInCount === 1 ? '' : 's'}. this can't be undone.`
+        : "this can't be undone.",
+      [
+        { text: 'cancel', style: 'cancel' },
+        { text: 'delete', style: 'destructive', onPress: deleteItem },
+      ]
+    );
+  }
+
+  async function deleteItem() {
+    if (!item) return;
+    const { error } = await supabase.from('closet_items').delete().eq('id', item.id);
+    if (error) { console.log('Deleting closet item failed:', error.message); return; }
+    router.back();
+  }
+
   async function searchDupes(text: string) {
     setDupeQuery(text);
     if (!text.trim()) { setDupeResults([]); return; }
-    const { data, error } = await supabase.from('products').select('*').or(`brand.ilike.%${text}%,name.ilike.%${text}%`).limit(8);
+    const { data, error } = await supabase.from('products').select('*').or(orIlike(['brand', 'name'], text)).limit(8);
     if (error) console.log('Dupe search failed:', error.message);
     setDupeResults((data as Product[]) || []);
   }
@@ -117,19 +180,28 @@ export default function ProductDetailScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={{ padding: 16 }}>
       <View style={styles.head}>
         <View style={[styles.swatch, { backgroundColor: item.color || item.product.default_color }]} />
-        <View>
+        <View style={styles.headInfo}>
           <SerifText style={styles.title}>{item.product.brand} — {item.product.name}</SerifText>
           <Text style={styles.sub}>{item.product.category} · worn {item.times_worn} times{costPerWear(item) ? ` · $${costPerWear(item)}/wear` : ''}</Text>
         </View>
       </View>
 
-      {isYours && item.status !== 'empty' && (
-        <Pressable style={styles.logEmptyBtn} onPress={logEmpty}>
-          <Text style={styles.logEmptyText}>log empty</Text>
-        </Pressable>
-      )}
-      {isYours && item.status === 'empty' && (
-        <View style={styles.emptyBadge}><Text style={styles.emptyBadgeText}>marked empty</Text></View>
+      {isYours && (
+        <View style={styles.actionRow}>
+          {item.status !== 'empty' ? (
+            <Pressable style={styles.actionBtn} onPress={logEmpty}>
+              <Text style={styles.logEmptyText}>log empty</Text>
+            </Pressable>
+          ) : (
+            <View style={[styles.actionBtn, styles.emptyBadge]}><Text style={styles.emptyBadgeText}>marked empty</Text></View>
+          )}
+          <Pressable style={styles.actionBtn} onPress={openEdit}>
+            <Text style={styles.logEmptyText}>edit</Text>
+          </Pressable>
+          <Pressable style={styles.actionBtn} onPress={confirmDelete}>
+            <Text style={styles.deleteText}>delete</Text>
+          </Pressable>
+        </View>
       )}
 
       <View style={styles.card}>
@@ -199,6 +271,45 @@ export default function ProductDetailScreen() {
           <Text style={styles.usedInCaption}>{l.caption}</Text>
         </View>
       ))}
+
+      <Modal visible={editOpen} animationType="slide" presentationStyle="pageSheet">
+        <ScrollView style={styles.modal} contentContainerStyle={{ padding: 20 }}>
+          <SerifText style={styles.modalTitle}>edit product</SerifText>
+          <Text style={styles.editHint}>
+            brand, name, and category are shared with anyone else who has this product — changes apply everywhere.
+          </Text>
+
+          <Text style={styles.fieldLabel}>brand</Text>
+          <TextInput style={styles.input} value={editBrand} onChangeText={setEditBrand} />
+
+          <Text style={styles.fieldLabel}>product name</Text>
+          <TextInput style={styles.input} value={editName} onChangeText={setEditName} />
+
+          <Text style={styles.fieldLabel}>shade (optional)</Text>
+          <TextInput style={styles.input} value={editShade} onChangeText={setEditShade} />
+
+          <Text style={styles.fieldLabel}>category</Text>
+          <View style={styles.chipRow}>
+            {CATEGORY_ORDER.map(cat => (
+              <Pressable
+                key={cat}
+                style={[styles.chip, editCategory === cat && styles.chipActive]}
+                onPress={() => setEditCategory(cat)}
+              >
+                <Text style={[styles.chipText, editCategory === cat && styles.chipTextActive]}>{cat}</Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Text style={styles.fieldLabel}>price</Text>
+          <TextInput style={styles.input} keyboardType="decimal-pad" value={editPrice} onChangeText={setEditPrice} />
+
+          <Pressable style={[styles.saveBtn, savingEdit && { opacity: 0.6 }]} disabled={savingEdit} onPress={saveEdit}>
+            <Text style={styles.saveBtnText}>{savingEdit ? 'saving...' : 'save changes'}</Text>
+          </Pressable>
+          <Pressable onPress={() => setEditOpen(false)}><Text style={styles.cancelText}>cancel</Text></Pressable>
+        </ScrollView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -207,12 +318,15 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: BG },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BG },
   head: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  swatch: { width: 48, height: 48, borderRadius: 12 },
-  title: { fontSize: 17, fontWeight: '700' },
+  swatch: { width: 48, height: 48, borderRadius: 12, flexShrink: 0 },
+  headInfo: { flex: 1, minWidth: 0 },
+  title: { fontSize: 17, fontWeight: '700', flexShrink: 1 },
   sub: { fontSize: 12, color: '#6B615F', marginTop: 2 },
-  logEmptyBtn: { borderWidth: 1, borderColor: BORDER, borderRadius: 9, paddingVertical: 8, alignItems: 'center', marginBottom: 16, backgroundColor: '#fff' },
+  actionRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  actionBtn: { flex: 1, borderWidth: 1, borderColor: BORDER, borderRadius: 9, paddingVertical: 8, alignItems: 'center', backgroundColor: '#fff' },
   logEmptyText: { fontSize: 12, fontWeight: '600', color: '#6B615F' },
-  emptyBadge: { backgroundColor: BORDER, borderRadius: 9, paddingVertical: 8, alignItems: 'center', marginBottom: 16 },
+  deleteText: { fontSize: 12, fontWeight: '600', color: '#B3403A' },
+  emptyBadge: { backgroundColor: BORDER },
   emptyBadgeText: { fontSize: 12, fontWeight: '600', color: '#6B615F' },
   card: { backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 14, padding: 14, marginBottom: 16 },
   sectionTitle: { fontSize: 14, fontWeight: '700', marginBottom: 10 },
@@ -233,4 +347,14 @@ const styles = StyleSheet.create({
   usedInRow: { backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 12, padding: 10, marginBottom: 8 },
   usedInHandle: { fontSize: 12, fontWeight: '700' },
   usedInCaption: { fontSize: 11, color: '#6B615F', marginTop: 2 },
+  modal: { flex: 1, backgroundColor: BG },
+  modalTitle: { fontSize: 18, marginBottom: 8 },
+  editHint: { fontSize: 11, color: '#6B615F', marginBottom: 16 },
+  fieldLabel: { fontSize: 11, color: '#6B615F', marginBottom: 4, marginTop: 8 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  chip: { borderWidth: 1, borderColor: BORDER, borderRadius: 20, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#fff' },
+  chipActive: { backgroundColor: PLUM, borderColor: PLUM },
+  chipText: { fontSize: 11, color: INK },
+  chipTextActive: { color: '#fff' },
+  cancelText: { textAlign: 'center', color: '#6B615F', marginTop: 12, marginBottom: 20 },
 });
