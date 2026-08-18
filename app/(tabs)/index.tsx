@@ -1,17 +1,18 @@
+import GlassCard from '@/components/GlassCard';
 import { Text } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
+import { COLORS, GLASS_TINTS, GRADIENTS, RADII } from '@/lib/theme';
 import { FeedLook } from '@/lib/types';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator, FlatList, Image, Pressable, StyleSheet, View,
 } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
-const PLUM = '#5B2333';
-const BG = '#FAF6F2';
-const BORDER = '#E9E1DC';
-const SAGE_TINT = '#E7EBE0';
-const GOLD_TINT = '#F5E9D2';
+const CARD_TINTS: (keyof typeof GLASS_TINTS)[] = ['sage', 'coral', 'blush'];
 
 export default function FeedScreen() {
   const [looks, setLooks] = useState<FeedLook[]>([]);
@@ -109,75 +110,114 @@ export default function FeedScreen() {
     }
   }
 
-  if (loading) return <View style={styles.center}><ActivityIndicator color={PLUM} /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator color={COLORS.sage} /></View>;
 
   return (
-    <FlatList
-      style={styles.screen}
-      contentContainerStyle={{ padding: 16 }}
-      data={looks}
-      keyExtractor={l => l.id}
-      renderItem={({ item }) => {
-        const likeCount = item.likes[0]?.count ?? 0;
-        const isLiked = likedIds.has(item.id);
-        return (
-          <View style={styles.card}>
-            <View style={styles.who}>
-              <View style={[styles.avatar, { backgroundColor: item.poster.avatar_color }]}>
-                <Text style={styles.avatarText}>{item.poster.handle.slice(0, 2).toUpperCase()}</Text>
+    <View style={styles.screen}>
+      <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <FlatList
+        contentContainerStyle={{ padding: 16 }}
+        data={looks}
+        keyExtractor={l => l.id}
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInUp.delay(index * 40).springify()}>
+            <LookCard
+              look={item}
+              tint={CARD_TINTS[index % CARD_TINTS.length]}
+              myProductIds={myProductIds}
+              isLiked={likedIds.has(item.id)}
+              likeCount={item.likes[0]?.count ?? 0}
+              onToggleLike={() => toggleLike(item.id)}
+            />
+          </Animated.View>
+        )}
+        ListEmptyComponent={
+          <Text style={styles.empty}>your feed is friends-only — add friends to start seeing their looks.</Text>
+        }
+      />
+    </View>
+  );
+}
+
+function LookCard({ look, tint, myProductIds, isLiked, likeCount, onToggleLike }: {
+  look: FeedLook; tint: keyof typeof GLASS_TINTS; myProductIds: Set<string>;
+  isLiked: boolean; likeCount: number; onToggleLike: () => void;
+}) {
+  const [tagsOpen, setTagsOpen] = useState(false);
+  const count = look.look_products.length;
+
+  return (
+    <GlassCard tint={tint} radius="lg" style={{ marginBottom: 16 }}>
+      <View style={styles.who}>
+        <View style={[styles.avatar, { backgroundColor: look.poster.avatar_color }]}>
+          <Text style={styles.avatarText}>{look.poster.handle.slice(0, 2).toUpperCase()}</Text>
+        </View>
+        <View>
+          <Text style={styles.handle}>{look.poster.handle}</Text>
+          <Text style={styles.caption}>{look.caption}</Text>
+        </View>
+      </View>
+
+      <Image source={{ uri: look.photo_url }} style={styles.photo} />
+
+      {count > 0 && (
+        <Pressable style={styles.tagsToggle} onPress={() => setTagsOpen(o => !o)}>
+          <Ionicons name="pricetag-outline" size={13} color={COLORS.ink} />
+          <Text style={styles.tagsToggleText}>{count} product{count === 1 ? '' : 's'} tagged</Text>
+          <Ionicons name={tagsOpen ? 'chevron-up' : 'chevron-down'} size={14} color={COLORS.ink} />
+        </Pressable>
+      )}
+
+      {tagsOpen && (
+        <View style={styles.tagWrap}>
+          {look.look_products.map((lp, i) => {
+            const inCloset = myProductIds.has(lp.closet_item.product_id);
+            return (
+              <View
+                key={i}
+                style={[styles.tag, { backgroundColor: inCloset ? COLORS.sageSoft + '33' : COLORS.lavenderTint }]}
+              >
+                <Text style={styles.tagName}>{lp.closet_item.product.brand} {lp.closet_item.product.name}</Text>
+                <Text style={styles.tagDetail}>
+                  {lp.closet_item.price ? `$${lp.closet_item.price} · ` : ''}
+                  {inCloset ? 'in your closet' : 'not in your closet'}
+                </Text>
               </View>
-              <View>
-                <Text style={styles.handle}>{item.poster.handle}</Text>
-                <Text style={styles.caption}>{item.caption}</Text>
-              </View>
-            </View>
+            );
+          })}
+        </View>
+      )}
 
-            <Image source={{ uri: item.photo_url }} style={styles.photo} />
-
-            <View style={{ marginTop: 10, gap: 6 }}>
-              {item.look_products.map((lp, i) => {
-                const inCloset = myProductIds.has(lp.closet_item.product_id);
-                return (
-                  <View key={i} style={[styles.productRow, { backgroundColor: inCloset ? SAGE_TINT : GOLD_TINT }]}>
-                    <Text style={styles.productName}>{lp.closet_item.product.brand} {lp.closet_item.product.name}</Text>
-                    <Text style={styles.productSub}>
-                      {lp.closet_item.price ? `$${lp.closet_item.price} · ` : ''}
-                      {inCloset ? 'in your closet' : 'not in your closet'}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-
-            <Pressable style={styles.likeBtn} onPress={() => toggleLike(item.id)}>
-              <Text style={[styles.likeText, isLiked && { color: '#E8846B' }]}>
-                {isLiked ? '♥' : '♡'} {likeCount}
-              </Text>
-            </Pressable>
-          </View>
-        );
-      }}
-      ListEmptyComponent={
-        <Text style={styles.empty}>your feed is friends-only — add friends to start seeing their looks.</Text>
-      }
-    />
+      <Pressable style={styles.likeBtn} onPress={onToggleLike}>
+        <Ionicons
+          name={isLiked ? 'heart' : 'heart-outline'}
+          size={16}
+          color={isLiked ? COLORS.rose : COLORS.ink}
+          style={isLiked ? styles.likeGlow : undefined}
+        />
+        <Text style={[styles.likeText, isLiked && { color: COLORS.rose }]}>{likeCount}</Text>
+      </Pressable>
+    </GlassCard>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: BG },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BG },
-  card: { backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 14, marginBottom: 16 },
+  screen: { flex: 1, backgroundColor: COLORS.bg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
   who: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   avatar: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  handle: { fontSize: 13, fontWeight: '700' },
-  caption: { fontSize: 12, color: '#6B615F' },
-  photo: { width: '100%', aspectRatio: 1, borderRadius: 12, backgroundColor: '#F1E1E5' },
-  productRow: { padding: 8, borderRadius: 9 },
-  productName: { fontSize: 12, fontWeight: '600' },
-  productSub: { fontSize: 11, color: '#6B615F', marginTop: 1 },
-  likeBtn: { marginTop: 10, alignSelf: 'flex-start' },
-  likeText: { fontSize: 14 },
-  empty: { textAlign: 'center', color: '#6B615F', padding: 60 },
+  handle: { fontSize: 13, fontWeight: '700', color: COLORS.ink },
+  caption: { fontSize: 12, color: COLORS.textSecondary },
+  photo: { width: '100%', aspectRatio: 1, borderRadius: 12, backgroundColor: COLORS.blushLight },
+  tagsToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, alignSelf: 'flex-start' },
+  tagsToggleText: { fontSize: 12, fontWeight: '600', color: COLORS.ink },
+  tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  tag: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: RADII.sm, maxWidth: '100%' },
+  tagName: { fontSize: 11, fontWeight: '600', color: COLORS.ink },
+  tagDetail: { fontSize: 10, color: COLORS.textSecondary, marginTop: 2 },
+  likeBtn: { marginTop: 12, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5 },
+  likeGlow: { shadowColor: COLORS.rose, shadowOpacity: 0.6, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } },
+  likeText: { fontSize: 13, color: COLORS.ink },
+  empty: { textAlign: 'center', color: COLORS.textSecondary, padding: 60 },
 });

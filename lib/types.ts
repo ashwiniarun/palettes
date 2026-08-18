@@ -12,6 +12,7 @@ export type Product = {
   category: Category;
   default_color: string;
   barcode: string | null;
+  link: string | null;
 };
 
 export type ClosetItem = {
@@ -31,6 +32,13 @@ export type ClosetItem = {
 export function costPerWear(item: ClosetItem): string | null {
   if (!item.price || !item.times_worn) return null;
   return (item.price / item.times_worn).toFixed(2);
+}
+
+// So a saved link always opens directly — people will paste "amazon.com/..."
+// without a scheme as often as not.
+export function normalizeUrl(url: string): string {
+  const trimmed = url.trim();
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
 export type Look = {

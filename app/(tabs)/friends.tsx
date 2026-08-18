@@ -1,15 +1,18 @@
+import GlassCard from '@/components/GlassCard';
+import NeumorphicButton from '@/components/NeumorphicButton';
 import { SerifText, Text, TextInput } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
+import { COLORS, GLASS_TINTS, GRADIENTS } from '@/lib/theme';
 import { Profile } from '@/lib/types';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator, FlatList, Pressable, StyleSheet, View,
 } from 'react-native';
 
-const PLUM = '#5B2333';
-const BG = '#FAF6F2';
-const BORDER = '#E9E1DC';
+const PLACEHOLDER = COLORS.inkSoft;
+const ROW_TINTS: (keyof typeof GLASS_TINTS)[] = ['sage', 'blush', 'coral'];
 
 type FriendshipRow = { id: string; requester_id: string; addressee_id: string; status: 'pending' | 'accepted' };
 type Status = { type: 'none' | 'friends' | 'outgoing' | 'incoming'; rowId?: string };
@@ -95,16 +98,19 @@ export default function FriendsScreen() {
     load();
   }
 
-  if (loading) return <View style={styles.center}><ActivityIndicator color={PLUM} /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator color={COLORS.sage} /></View>;
 
   const incoming = rows.filter(r => r.status === 'pending' && r.addressee_id === myId);
   const accepted = rows.filter(r => r.status === 'accepted');
 
   return (
     <View style={styles.screen}>
+      <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+
       <TextInput
         style={styles.searchInput}
         placeholder="search by handle..."
+        placeholderTextColor={PLACEHOLDER}
         value={query}
         onChangeText={setQuery}
       />
@@ -114,7 +120,7 @@ export default function FriendsScreen() {
           contentContainerStyle={{ padding: 16 }}
           data={searchResults}
           keyExtractor={p => p.id}
-          renderItem={({ item }) => renderRow(item, statusFor(item.id))}
+          renderItem={({ item, index }) => renderRow(item, statusFor(item.id), index)}
           ListEmptyComponent={<Text style={styles.empty}>no matches</Text>}
         />
       ) : (
@@ -127,7 +133,7 @@ export default function FriendsScreen() {
             ...accepted.map(r => ({ row: r })),
           ]}
           keyExtractor={(item, i) => 'header' in item ? item.header! + i : item.row!.id}
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             if ('header' in item) return <SerifText style={styles.sectionTitle}>{item.header}</SerifText>;
             const row = item.row!;
             const otherId = row.requester_id === myId ? row.addressee_id : row.requester_id;
@@ -135,15 +141,17 @@ export default function FriendsScreen() {
             if (!profile) return null;
             if (row.status === 'pending') {
               return (
-                <View style={styles.row}>
-                  <View style={[styles.avatar, { backgroundColor: profile.avatar_color }]}><Text style={styles.avatarText}>{profile.handle.slice(0,2).toUpperCase()}</Text></View>
-                  <View style={{ flex: 1 }}><Text style={styles.handle}>{profile.handle}</Text><Text style={styles.sub}>wants to be friends</Text></View>
-                  <Pressable style={styles.acceptBtn} onPress={() => sendOrAccept(otherId)}><Text style={styles.acceptText}>accept</Text></Pressable>
-                  <Pressable style={styles.declineBtn} onPress={() => decline(row.id)}><Text style={styles.declineText}>decline</Text></Pressable>
-                </View>
+                <GlassCard tint={ROW_TINTS[index % ROW_TINTS.length]} radius="md" padding={11} style={{ marginBottom: 8 }}>
+                  <View style={styles.rowInner}>
+                    <View style={[styles.avatar, { backgroundColor: profile.avatar_color }]}><Text style={styles.avatarText}>{profile.handle.slice(0,2).toUpperCase()}</Text></View>
+                    <View style={{ flex: 1 }}><Text style={styles.handle}>{profile.handle}</Text><Text style={styles.sub}>wants to be friends</Text></View>
+                    <NeumorphicButton variant="pill" label="accept" glow="coral" onPress={() => sendOrAccept(otherId)} style={{ marginRight: 6 }} />
+                    <NeumorphicButton variant="pill" label="decline" onPress={() => decline(row.id)} />
+                  </View>
+                </GlassCard>
               );
             }
-            return renderRow(profile, { type: 'friends' });
+            return renderRow(profile, { type: 'friends' }, index);
           }}
           ListEmptyComponent={<Text style={styles.empty}>no friends yet — search above to find people.</Text>}
         />
@@ -151,41 +159,45 @@ export default function FriendsScreen() {
     </View>
   );
 
-  function renderRow(profile: Profile, status: Status) {
+  function renderRow(profile: Profile, status: Status, index: number) {
     return (
-      <View style={styles.row}>
-        <View style={[styles.avatar, { backgroundColor: profile.avatar_color }]}><Text style={styles.avatarText}>{profile.handle.slice(0,2).toUpperCase()}</Text></View>
-        <Pressable style={{ flex: 1 }} onPress={() => router.push(`/friend/${profile.id}`)}>
-          <Text style={styles.handle}>{profile.handle}</Text>
-          {profile.bio ? <Text style={styles.sub}>{profile.bio}</Text> : null}
-        </Pressable>
-        {status.type === 'friends' && <Text style={styles.friendsLabel}>friends</Text>}
-        {status.type === 'outgoing' && <Text style={styles.pendingLabel}>requested</Text>}
-        {(status.type === 'none' || status.type === 'incoming') && (
-          <Pressable style={styles.acceptBtn} onPress={() => sendOrAccept(profile.id)}>
-            <Text style={styles.acceptText}>{status.type === 'incoming' ? 'accept' : 'add friend'}</Text>
+      <GlassCard tint={ROW_TINTS[index % ROW_TINTS.length]} radius="md" padding={11} style={{ marginBottom: 8 }}>
+        <View style={styles.rowInner}>
+          <View style={[styles.avatar, { backgroundColor: profile.avatar_color }]}><Text style={styles.avatarText}>{profile.handle.slice(0,2).toUpperCase()}</Text></View>
+          <Pressable style={{ flex: 1 }} onPress={() => router.push(`/friend/${profile.id}`)}>
+            <Text style={styles.handle}>{profile.handle}</Text>
+            {profile.bio ? <Text style={styles.sub}>{profile.bio}</Text> : null}
           </Pressable>
-        )}
-      </View>
+          {status.type === 'friends' && <Text style={styles.friendsLabel}>friends</Text>}
+          {status.type === 'outgoing' && <Text style={styles.pendingLabel}>requested</Text>}
+          {(status.type === 'none' || status.type === 'incoming') && (
+            <NeumorphicButton
+              variant="pill"
+              label={status.type === 'incoming' ? 'accept' : 'add friend'}
+              glow="coral"
+              onPress={() => sendOrAccept(profile.id)}
+            />
+          )}
+        </View>
+      </GlassCard>
     );
   }
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: BG },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BG },
-  searchInput: { margin: 16, marginBottom: 0, borderWidth: 1, borderColor: BORDER, borderRadius: 12, padding: 11, backgroundColor: '#fff' },
-  sectionTitle: { fontSize: 15, fontWeight: '700', marginTop: 14, marginBottom: 8 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 12, padding: 11, marginBottom: 8 },
+  screen: { flex: 1, backgroundColor: COLORS.bg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
+  searchInput: {
+    margin: 16, marginBottom: 0, borderRadius: 12, padding: 11, backgroundColor: COLORS.cream, color: COLORS.ink,
+    shadowColor: COLORS.sageDeep, shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: -2, height: -2 },
+  },
+  sectionTitle: { fontSize: 15, marginTop: 14, marginBottom: 8, color: COLORS.ink },
+  rowInner: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  handle: { fontSize: 13, fontWeight: '700' },
-  sub: { fontSize: 11, color: '#6B615F', marginTop: 1 },
-  friendsLabel: { fontSize: 11, color: '#6B615F' },
-  pendingLabel: { fontSize: 11, color: '#6B615F' },
-  acceptBtn: { backgroundColor: PLUM, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 12 },
-  acceptText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  declineBtn: { borderWidth: 1, borderColor: BORDER, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 12, marginLeft: 6 },
-  declineText: { color: '#6B615F', fontSize: 11, fontWeight: '700' },
-  empty: { textAlign: 'center', color: '#6B615F', padding: 40 },
+  handle: { fontSize: 13, fontWeight: '700', color: COLORS.ink },
+  sub: { fontSize: 11, color: COLORS.textSecondary, marginTop: 1 },
+  friendsLabel: { fontSize: 11, color: COLORS.textSecondary },
+  pendingLabel: { fontSize: 11, color: COLORS.textSecondary },
+  empty: { textAlign: 'center', color: COLORS.textSecondary, padding: 40 },
 });

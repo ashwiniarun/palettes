@@ -1,16 +1,16 @@
+import GlassCard from '@/components/GlassCard';
+import NeumorphicButton from '@/components/NeumorphicButton';
+import Sheet from '@/components/Sheet';
 import { SerifText, Text, TextInput } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
+import { COLORS, GRADIENTS, RADII } from '@/lib/theme';
 import { CATEGORY_ORDER, ClosetItem } from '@/lib/types';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-const PLUM = '#5B2333';
-const BG = '#FAF6F2';
-const BORDER = '#E9E1DC';
-const SAGE_TINT = '#E7EBE0';
-const PLACEHOLDER = '#8A8078';
-const INK = '#231F20';
+const PLACEHOLDER = COLORS.inkSoft;
 
 type LookDetail = {
   id: string; user_id: string; caption: string; photo_url: string;
@@ -66,40 +66,43 @@ export default function LookDetailScreen() {
     router.back();
   }
 
-  if (loading || !look) return <View style={styles.center}><ActivityIndicator color={PLUM} /></View>;
+  if (loading || !look) return <View style={styles.center}><ActivityIndicator color={COLORS.sage} /></View>;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={{ padding: 16 }}>
-      <Text style={styles.handle}>{look.poster.handle}</Text>
-      <Text style={styles.caption}>{look.caption}</Text>
-      <Image source={{ uri: look.photo_url }} style={styles.photo} />
+    <View style={styles.screen}>
+      <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <Text style={styles.handle}>{look.poster.handle}</Text>
+        <Text style={styles.caption}>{look.caption}</Text>
+        <Image source={{ uri: look.photo_url }} style={styles.photo} />
 
-      {isYours && (
-        <View style={styles.actionRow}>
-          <Pressable style={styles.actionBtn} onPress={() => setEditOpen(true)}>
-            <Text style={styles.actionBtnText}>edit</Text>
-          </Pressable>
-          <Pressable style={styles.actionBtn} onPress={confirmDelete}>
-            <Text style={styles.deleteText}>delete</Text>
-          </Pressable>
-        </View>
-      )}
+        {isYours && (
+          <View style={styles.actionRow}>
+            <NeumorphicButton label="edit" glow="sage" onPress={() => setEditOpen(true)} style={{ flex: 1 }} />
+            <NeumorphicButton onPress={confirmDelete} style={{ flex: 1 }}>
+              <Text style={styles.deleteText}>delete</Text>
+            </NeumorphicButton>
+          </View>
+        )}
 
-      <SerifText style={styles.sectionTitle}>products used</SerifText>
-      {look.look_products.map((lp, i) => (
-        <View key={i} style={styles.productRow}>
-          <Text style={styles.productName}>{lp.closet_item.product.brand} {lp.closet_item.product.name}</Text>
-          {lp.closet_item.price ? <Text style={styles.productPrice}>${lp.closet_item.price}</Text> : null}
-        </View>
-      ))}
+        <SerifText style={styles.sectionTitle}>products used</SerifText>
+        {look.look_products.map((lp, i) => (
+          <GlassCard key={i} tint={i % 2 === 0 ? 'sage' : 'coral'} radius="md" padding={10} style={{ marginBottom: 6 }}>
+            <View style={styles.productRow}>
+              <Text style={styles.productName}>{lp.closet_item.product.brand} {lp.closet_item.product.name}</Text>
+              {lp.closet_item.price ? <Text style={styles.productPrice}>${lp.closet_item.price}</Text> : null}
+            </View>
+          </GlassCard>
+        ))}
 
-      <EditLookModal
-        visible={editOpen}
-        look={look}
-        onClose={() => setEditOpen(false)}
-        onSaved={() => { setEditOpen(false); load(); }}
-      />
-    </ScrollView>
+        <EditLookModal
+          visible={editOpen}
+          look={look}
+          onClose={() => setEditOpen(false)}
+          onSaved={() => { setEditOpen(false); load(); }}
+        />
+      </ScrollView>
+    </View>
   );
 }
 
@@ -155,8 +158,8 @@ function EditLookModal({ visible, look, onClose, onSaved }: {
   }
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <ScrollView style={styles.modal} contentContainerStyle={{ padding: 20 }}>
+    <Sheet visible={visible} onClose={onClose}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
         <SerifText style={styles.modalTitle}>edit look</SerifText>
 
         <TextInput
@@ -171,7 +174,7 @@ function EditLookModal({ visible, look, onClose, onSaved }: {
         <Text style={styles.tagCount}>{selected.size} product{selected.size === 1 ? '' : 's'} tagged</Text>
 
         {loadingCloset ? (
-          <ActivityIndicator color={PLUM} style={{ marginTop: 20 }} />
+          <ActivityIndicator color={COLORS.sage} style={{ marginTop: 20 }} />
         ) : (
           CATEGORY_ORDER.map(cat => {
             const items = closetItems.filter(c => c.product.category === cat);
@@ -191,44 +194,42 @@ function EditLookModal({ visible, look, onClose, onSaved }: {
           })
         )}
 
-        <Pressable
-          style={[styles.saveBtn, saving && { opacity: 0.6 }]}
+        <NeumorphicButton
+          label={saving ? 'saving...' : 'save changes'}
+          glow="coral"
           disabled={saving || !caption.trim() || selected.size === 0}
           onPress={handleSave}
-        >
-          <Text style={styles.saveBtnText}>{saving ? 'saving...' : 'save changes'}</Text>
-        </Pressable>
+          style={{ marginTop: 16 }}
+        />
         <Pressable onPress={onClose}><Text style={styles.cancelText}>cancel</Text></Pressable>
       </ScrollView>
-    </Modal>
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: BG },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BG },
-  handle: { fontSize: 15, fontWeight: '700' },
-  caption: { fontSize: 13, color: '#6B615F', marginBottom: 12 },
-  photo: { width: '100%', aspectRatio: 1, borderRadius: 14, marginBottom: 16, backgroundColor: '#F1E1E5' },
+  screen: { flex: 1, backgroundColor: COLORS.bg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
+  handle: { fontSize: 15, fontWeight: '700', color: COLORS.ink },
+  caption: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 12 },
+  photo: { width: '100%', aspectRatio: 1, borderRadius: RADII.lg, marginBottom: 16, backgroundColor: COLORS.blushLight },
   actionRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  actionBtn: { flex: 1, borderWidth: 1, borderColor: BORDER, borderRadius: 9, paddingVertical: 8, alignItems: 'center', backgroundColor: '#fff' },
-  actionBtnText: { fontSize: 12, fontWeight: '600', color: '#6B615F' },
-  deleteText: { fontSize: 12, fontWeight: '600', color: '#B3403A' },
-  sectionTitle: { fontSize: 15, marginBottom: 10 },
-  productRow: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: SAGE_TINT, borderRadius: 9, padding: 10, marginBottom: 6 },
-  productName: { fontSize: 12, fontWeight: '600', flex: 1 },
-  productPrice: { fontSize: 12, color: '#6B615F' },
-  modal: { flex: 1, backgroundColor: BG },
-  modalTitle: { fontSize: 18, marginBottom: 16 },
-  input: { borderWidth: 1, borderColor: BORDER, borderRadius: 9, padding: 10, marginBottom: 12, backgroundColor: '#fff', minHeight: 44, color: INK },
-  tagCount: { fontSize: 11, color: '#6B615F', marginBottom: 8 },
-  catLabel: { fontSize: 11, fontWeight: '700', color: PLUM, textTransform: 'uppercase', marginTop: 10, marginBottom: 6 },
-  tagRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', padding: 8, borderRadius: 9, marginBottom: 6 },
-  checkbox: { width: 16, height: 16, borderWidth: 1, borderColor: BORDER, borderRadius: 4 },
-  checkboxChecked: { backgroundColor: PLUM, borderColor: PLUM },
+  deleteText: { fontSize: 13, fontWeight: '600', color: COLORS.danger },
+  sectionTitle: { fontSize: 15, marginBottom: 10, color: COLORS.ink },
+  productRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  productName: { fontSize: 12, fontWeight: '600', flex: 1, color: COLORS.ink },
+  productPrice: { fontSize: 12, color: COLORS.textSecondary },
+  modalTitle: { fontSize: 18, marginBottom: 16, color: COLORS.ink },
+  input: {
+    borderRadius: RADII.md, padding: 10, marginBottom: 12, backgroundColor: COLORS.cream, minHeight: 44, color: COLORS.ink,
+    shadowColor: COLORS.sageDeep, shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: -2, height: -2 },
+  },
+  tagCount: { fontSize: 11, color: COLORS.textSecondary, marginBottom: 8 },
+  catLabel: { fontSize: 11, fontWeight: '700', color: COLORS.sageDeep, textTransform: 'uppercase', marginTop: 10, marginBottom: 6 },
+  tagRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.cream, padding: 8, borderRadius: RADII.sm, marginBottom: 6 },
+  checkbox: { width: 16, height: 16, borderWidth: 1, borderColor: COLORS.border, borderRadius: 4 },
+  checkboxChecked: { backgroundColor: COLORS.coral, borderColor: COLORS.coral },
   swatchSm: { width: 22, height: 22, borderRadius: 6 },
-  tagName: { fontSize: 12, flex: 1 },
-  saveBtn: { backgroundColor: PLUM, borderRadius: 10, padding: 12, alignItems: 'center', marginTop: 16 },
-  saveBtnText: { color: '#fff', fontWeight: '600' },
-  cancelText: { textAlign: 'center', color: '#6B615F', marginTop: 12, marginBottom: 20 },
+  tagName: { fontSize: 12, flex: 1, color: COLORS.ink },
+  cancelText: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 12, marginBottom: 20 },
 });

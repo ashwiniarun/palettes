@@ -23,6 +23,7 @@ create table products (
   category text not null,       -- skincare, base, face, contour, blush, eyes, brow, lips, setting spray
   default_color text default '#D4A5A5',
   barcode text,                 -- UPC/EAN from barcode scan, so a scan skips search entirely next time
+  link text,                    -- optional buy-it-here URL, shown to anyone viewing the product
   created_at timestamptz default now()
 );
 -- DB-level guard against exact duplicate rows — Postgres table constraints
@@ -148,3 +149,6 @@ create policy "manage own looks" on looks
 -- ── Migration: barcode scanning (run this once against an existing DB) ──────
 -- alter table products add column if not exists barcode text;
 -- create unique index if not exists idx_products_barcode_unique on products (barcode) where barcode is not null;
+
+-- ── Migration: buy-it-here product links (run this once against an existing DB) ──
+-- alter table products add column if not exists link text;

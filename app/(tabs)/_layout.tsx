@@ -1,14 +1,20 @@
+import GlassHeaderBackground from '@/components/GlassHeaderBackground';
+import GlassTabBar from '@/components/GlassTabBar';
+import { COLORS } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-
-const PLUM = '#5B2333';
+import { Image } from 'react-native';
 
 export default function TabLayout() {
   return (
-    <Tabs screenOptions={{
-      tabBarActiveTintColor: PLUM,
-      headerTitleStyle: { fontFamily: 'Fraunces_600SemiBold', fontSize: 22 },
-    }}>
+    <Tabs
+      tabBar={props => <GlassTabBar {...props} />}
+      screenOptions={{
+        tabBarActiveTintColor: COLORS.coral,
+        headerTitleStyle: { fontFamily: 'Fraunces_600SemiBold', fontSize: 22, color: COLORS.ink },
+        headerBackground: () => <GlassHeaderBackground />,
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
@@ -22,7 +28,13 @@ export default function TabLayout() {
         options={{
           title: 'Closet',
           headerTitle: 'palettes',
-          tabBarIcon: ({ color, size }) => <Ionicons name="shirt-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Image
+              source={require('@/assets/images/closet-tab-icon.png')}
+              style={{ width: size * (198 / 260), height: size, tintColor: color }}
+              resizeMode="contain"
+            />
+          ),
         }}
       />
       <Tabs.Screen

@@ -1,30 +1,36 @@
+import GlassCard from '@/components/GlassCard';
+import NeumorphicButton from '@/components/NeumorphicButton';
+import Sheet from '@/components/Sheet';
 import { SerifText, Text, TextInput } from '@/components/ThemedText';
 import { resizeForUpload } from '@/lib/imageResize';
 import { supabase } from '@/lib/supabase';
+import { COLORS, GLASS_TINTS, GRADIENTS, RADII, TAB_BAR_BASE_HEIGHT } from '@/lib/theme';
 import { CATEGORY_ORDER, ClosetItem, Look, Profile } from '@/lib/types';
 import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system/legacy';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator, Alert, FlatList, Image, Modal, Pressable,
+  ActivityIndicator, Alert, FlatList, Image, Pressable,
   ScrollView, StyleSheet, View,
 } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const PLUM = '#5B2333';
-const BG = '#FAF6F2';
-const BORDER = '#E9E1DC';
-const PLACEHOLDER = '#8A8078';
-const INK = '#231F20';
+const PLACEHOLDER = COLORS.inkSoft;
+const TILE_TINTS: (keyof typeof GLASS_TINTS)[] = ['coral', 'sage', 'blush'];
 
 export default function YouScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [closet, setCloset] = useState<ClosetItem[]>([]);
   const [looks, setLooks] = useState<Look[]>([]);
   const [loading, setLoading] = useState(true);
   const [postOpen, setPostOpen] = useState(false);
+  const [switchOpen, setSwitchOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,40 +61,54 @@ export default function YouScreen() {
   const empty = closet.filter(c => c.status === 'empty');
   const mostWorn = [...closet].sort((a, b) => b.times_worn - a.times_worn)[0];
 
-  if (loading) return <View style={styles.center}><ActivityIndicator color={PLUM} /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator color={COLORS.sage} /></View>;
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
+      <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
         {profile && (
-          <View style={styles.profileHead}>
-            <View style={[styles.avatar, { backgroundColor: profile.avatar_color }]}>
-              <SerifText style={styles.avatarText}>{profile.handle.slice(0, 2).toUpperCase()}</SerifText>
+          <GlassCard tint="blush" glow="coral" radius="xl" style={{ marginBottom: 16 }}>
+            <View style={styles.profileHead}>
+              <View style={[styles.avatar, { backgroundColor: profile.avatar_color }]}>
+                <SerifText style={styles.avatarText}>{profile.handle.slice(0, 2).toUpperCase()}</SerifText>
+              </View>
+              <View style={{ flex: 1 }}>
+                <SerifText style={styles.displayName}>{profile.handle}</SerifText>
+                {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
+                <Text style={styles.username}>@{profile.handle}</Text>
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <SerifText style={styles.displayName}>{profile.handle}</SerifText>
-              {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
-              <Text style={styles.username}>@{profile.handle}</Text>
-            </View>
-          </View>
+          </GlassCard>
         )}
 
         <View style={styles.statGrid}>
-          <View style={styles.statCard}><SerifText style={styles.statNum}>{active.length}</SerifText><Text style={styles.statLabel}>in closet</Text></View>
-          <View style={styles.statCard}><SerifText style={styles.statNum}>{empty.length}</SerifText><Text style={styles.statLabel}>empties</Text></View>
-          <View style={styles.statCard}><SerifText style={styles.statNum} numberOfLines={1}>{mostWorn?.product.brand || '—'}</SerifText><Text style={styles.statLabel}>most worn</Text></View>
+          <GlassCard tint="sage" radius="md" padding={12} style={{ flex: 1 }}>
+            <View style={styles.statInner}>
+              <SerifText style={styles.statNum}>{active.length}</SerifText>
+              <Text style={styles.statLabel}>in closet</Text>
+            </View>
+          </GlassCard>
+          <GlassCard tint="coral" radius="md" padding={12} style={{ flex: 1 }}>
+            <View style={styles.statInner}>
+              <SerifText style={styles.statNum}>{empty.length}</SerifText>
+              <Text style={styles.statLabel}>empties</Text>
+            </View>
+          </GlassCard>
+          <GlassCard tint="blush" radius="md" padding={12} style={{ flex: 1 }}>
+            <View style={styles.statInner}>
+              <SerifText style={styles.statNum} numberOfLines={1}>{mostWorn?.product.brand || '—'}</SerifText>
+              <Text style={styles.statLabel}>most worn</Text>
+            </View>
+          </GlassCard>
         </View>
 
-        <View style={styles.actionRow}>
-          {profile && (
-            <Pressable style={styles.actionBtn} onPress={() => router.push(`/rankings/${profile.id}`)}>
-              <Text style={styles.actionBtnText}>your rankings</Text>
-            </Pressable>
-          )}
-          <Pressable style={styles.actionBtn} onPress={() => setPostOpen(true)}>
-            <Text style={styles.actionBtnText}>+ post a look</Text>
-          </Pressable>
-        </View>
+        {profile && (
+          <GlassCard onPress={() => router.push(`/rankings/${profile.id}`)} tint="lavender" glow="lavender" radius="md" padding={12} style={{ marginBottom: 16 }}>
+            <Text style={styles.rankingsText}>your rankings →</Text>
+          </GlassCard>
+        )}
 
         <SerifText style={styles.sectionTitle}>your looks</SerifText>
         <FlatList
@@ -97,16 +117,30 @@ export default function YouScreen() {
           numColumns={2}
           columnWrapperStyle={{ gap: 10 }}
           scrollEnabled={false}
-          renderItem={({ item }) => (
-            <Pressable style={styles.lookTile} onPress={() => router.push(`/look/${item.id}`)}>
-              <Image source={{ uri: item.photo_url }} style={styles.lookImage} />
-              <Text style={styles.lookCaption} numberOfLines={1}>{item.caption}</Text>
-              <Text style={styles.lookLikes}>{item.likes_count} likes</Text>
-            </Pressable>
+          renderItem={({ item, index }) => (
+            <Animated.View entering={FadeInUp.delay(index * 40).springify()} style={{ flex: 1 }}>
+              <GlassCard onPress={() => router.push(`/look/${item.id}`)} tint={TILE_TINTS[index % TILE_TINTS.length]} radius="md" padding={8} style={styles.lookTile}>
+                <Image source={{ uri: item.photo_url }} style={styles.lookImage} />
+                <Text style={styles.lookCaption} numberOfLines={1}>{item.caption}</Text>
+                <Text style={styles.lookLikes}>{item.likes_count} likes</Text>
+              </GlassCard>
+            </Animated.View>
           )}
           ListEmptyComponent={<Text style={styles.empty}>no looks posted yet.</Text>}
         />
+
+        <Pressable onPress={() => setSwitchOpen(true)} style={{ marginTop: 20 }}>
+          <Text style={styles.switchAccountText}>switch test account (dev)</Text>
+        </Pressable>
       </ScrollView>
+
+      <NeumorphicButton
+        variant="fab"
+        icon="camera"
+        glow="coral"
+        onPress={() => setPostOpen(true)}
+        style={[styles.fab, { bottom: TAB_BAR_BASE_HEIGHT + Math.max(insets.bottom, 10) + 16 }]}
+      />
 
       <PostLookModal
         visible={postOpen}
@@ -114,7 +148,78 @@ export default function YouScreen() {
         onClose={() => setPostOpen(false)}
         onPosted={() => { setPostOpen(false); load(); }}
       />
+
+      <SwitchAccountModal
+        visible={switchOpen}
+        onClose={() => setSwitchOpen(false)}
+        onSwitched={() => { setSwitchOpen(false); load(); }}
+      />
     </View>
+  );
+}
+
+function SwitchAccountModal({ visible, onClose, onSwitched }: {
+  visible: boolean; onClose: () => void; onSwitched: () => void;
+}) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [signingIn, setSigningIn] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSignIn() {
+    if (!email.trim() || !password) return;
+    setSigningIn(true);
+    setError('');
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    setSigningIn(false);
+    if (signInError) { setError(signInError.message); return; }
+    setEmail(''); setPassword('');
+    onSwitched();
+  }
+
+  return (
+    <Sheet visible={visible} onClose={onClose}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+        <SerifText style={styles.modalTitle}>switch test account</SerifText>
+        <Text style={styles.editHint}>
+          dev-only utility for testing multiple accounts — signs the whole app into a different Supabase user.
+        </Text>
+
+        <TextInput
+          style={styles.input}
+          placeholder="email"
+          placeholderTextColor={PLACEHOLDER}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="password"
+          placeholderTextColor={PLACEHOLDER}
+          autoCapitalize="none"
+          autoCorrect={false}
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+        {error ? <Text style={styles.switchError}>{error}</Text> : null}
+
+        <NeumorphicButton
+          label={signingIn ? 'signing in...' : 'sign in'}
+          glow="coral"
+          disabled={signingIn || !email.trim() || !password}
+          onPress={handleSignIn}
+          style={{ marginTop: 8 }}
+        />
+        <Pressable onPress={onClose}><Text style={styles.cancelText}>cancel</Text></Pressable>
+      </ScrollView>
+    </Sheet>
   );
 }
 
@@ -205,13 +310,13 @@ function PostLookModal({ visible, closetItems, onClose, onPosted }: {
   }
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <ScrollView style={styles.modal} contentContainerStyle={{ padding: 20 }}>
+    <Sheet visible={visible} onClose={onClose}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
         <SerifText style={styles.modalTitle}>post a look</SerifText>
 
         <Pressable style={styles.photoPicker} onPress={choosePhoto} disabled={processingPhoto}>
           {processingPhoto ? (
-            <ActivityIndicator color={PLUM} />
+            <ActivityIndicator color={COLORS.sage} />
           ) : image ? (
             <Image source={{ uri: image }} style={styles.photoPreview} />
           ) : (
@@ -250,56 +355,61 @@ function PostLookModal({ visible, closetItems, onClose, onPosted }: {
           );
         })}
 
-        <Pressable
-          style={[styles.saveBtn, saving && { opacity: 0.6 }]}
+        <NeumorphicButton
+          label={saving ? 'posting...' : 'post look'}
+          glow="coral"
           disabled={saving || !image || !caption.trim() || selected.size === 0}
           onPress={handlePost}
-        >
-          <Text style={styles.saveBtnText}>{saving ? 'posting...' : 'post look'}</Text>
-        </Pressable>
+          style={{ marginTop: 16 }}
+        />
         <Pressable onPress={onClose}><Text style={styles.cancelText}>cancel</Text></Pressable>
       </ScrollView>
-    </Modal>
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: BG },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BG },
-  profileHead: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
+  screen: { flex: 1, backgroundColor: COLORS.bg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
+  profileHead: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   avatar: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
   avatarText: { color: '#fff', fontSize: 18 },
-  displayName: { fontSize: 20, color: INK },
-  bio: { fontSize: 12, color: '#6B615F', marginTop: 2 },
-  username: { fontSize: 12, color: '#6B615F', marginTop: 4, fontWeight: '600' },
+  displayName: { fontSize: 20, color: COLORS.ink },
+  bio: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  username: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4, fontWeight: '600' },
   statGrid: { flexDirection: 'row', gap: 10, marginBottom: 14 },
-  statCard: { flex: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 12, padding: 12, alignItems: 'center' },
-  statNum: { fontSize: 17, color: INK },
-  statLabel: { fontSize: 10, color: '#6B615F', marginTop: 2 },
-  actionRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  actionBtn: { flex: 1, borderWidth: 1, borderColor: BORDER, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: '#fff' },
-  actionBtnText: { fontWeight: '600', fontSize: 13 },
-  sectionTitle: { fontSize: 15, marginBottom: 10 },
-  lookTile: { flex: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 12, padding: 8, marginBottom: 10 },
-  lookImage: { width: '100%', aspectRatio: 1, borderRadius: 8, marginBottom: 6, backgroundColor: '#F1E1E5' },
-  lookCaption: { fontSize: 11 },
-  lookLikes: { fontSize: 10, color: '#6B615F', marginTop: 2 },
-  empty: { textAlign: 'center', color: '#6B615F', padding: 30 },
-  modal: { flex: 1, backgroundColor: BG },
-  modalTitle: { fontSize: 18, fontWeight: '600', marginBottom: 16 },
-  photoPicker: { width: '100%', aspectRatio: 1, borderWidth: 1, borderColor: BORDER, borderStyle: 'dashed', borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 8, backgroundColor: '#fff' },
-  photoPickerText: { color: '#6B615F' },
-  photoPreview: { width: '100%', height: '100%', borderRadius: 12 },
-  retakeText: { fontSize: 11, color: '#6B615F', textAlign: 'center', marginTop: -4, marginBottom: 10 },
-  input: { borderWidth: 1, borderColor: BORDER, borderRadius: 9, padding: 10, marginBottom: 12, backgroundColor: '#fff', minHeight: 44, color: INK },
-  tagCount: { fontSize: 11, color: '#6B615F', marginBottom: 8 },
-  catLabel: { fontSize: 11, fontWeight: '700', color: PLUM, textTransform: 'uppercase', marginTop: 10, marginBottom: 6 },
-  tagRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', padding: 8, borderRadius: 9, marginBottom: 6 },
-  checkbox: { width: 16, height: 16, borderWidth: 1, borderColor: BORDER, borderRadius: 4 },
-  checkboxChecked: { backgroundColor: PLUM, borderColor: PLUM },
+  statInner: { alignItems: 'center' },
+  statNum: { fontSize: 17, color: COLORS.ink },
+  statLabel: { fontSize: 10, color: COLORS.textSecondary, marginTop: 2 },
+  rankingsText: { textAlign: 'center', fontWeight: '600', fontSize: 13, color: COLORS.ink },
+  sectionTitle: { fontSize: 15, marginBottom: 10, color: COLORS.ink },
+  lookTile: { marginBottom: 10 },
+  lookImage: { width: '100%', aspectRatio: 1, borderRadius: RADII.sm, marginBottom: 6, backgroundColor: COLORS.blushLight },
+  lookCaption: { fontSize: 11, color: COLORS.ink },
+  lookLikes: { fontSize: 10, color: COLORS.textSecondary, marginTop: 2 },
+  empty: { textAlign: 'center', color: COLORS.textSecondary, padding: 30 },
+  fab: { position: 'absolute', right: 20 },
+  modalTitle: { fontSize: 18, marginBottom: 16, color: COLORS.ink },
+  photoPicker: {
+    width: '100%', aspectRatio: 1, borderWidth: 1, borderColor: COLORS.coral, borderStyle: 'dashed',
+    borderRadius: RADII.lg, justifyContent: 'center', alignItems: 'center', marginBottom: 8, backgroundColor: COLORS.cream,
+  },
+  photoPickerText: { color: COLORS.textSecondary },
+  photoPreview: { width: '100%', height: '100%', borderRadius: RADII.lg },
+  retakeText: { fontSize: 11, color: COLORS.textSecondary, textAlign: 'center', marginTop: -4, marginBottom: 10 },
+  input: {
+    borderRadius: RADII.md, padding: 10, marginBottom: 12, backgroundColor: COLORS.cream, minHeight: 44, color: COLORS.ink,
+    shadowColor: COLORS.sageDeep, shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: -2, height: -2 },
+  },
+  tagCount: { fontSize: 11, color: COLORS.textSecondary, marginBottom: 8 },
+  catLabel: { fontSize: 11, fontWeight: '700', color: COLORS.sageDeep, textTransform: 'uppercase', marginTop: 10, marginBottom: 6 },
+  tagRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.cream, padding: 8, borderRadius: RADII.sm, marginBottom: 6 },
+  checkbox: { width: 16, height: 16, borderWidth: 1, borderColor: COLORS.border, borderRadius: 4 },
+  checkboxChecked: { backgroundColor: COLORS.coral, borderColor: COLORS.coral },
   swatchSm: { width: 22, height: 22, borderRadius: 6 },
-  tagName: { fontSize: 12, flex: 1 },
-  saveBtn: { backgroundColor: PLUM, borderRadius: 10, padding: 12, alignItems: 'center', marginTop: 16 },
-  saveBtnText: { color: '#fff', fontWeight: '600' },
-  cancelText: { textAlign: 'center', color: '#6B615F', marginTop: 12, marginBottom: 20 },
+  tagName: { fontSize: 12, flex: 1, color: COLORS.ink },
+  cancelText: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 12, marginBottom: 20 },
+  switchAccountText: { fontSize: 11, color: COLORS.textSecondary, textAlign: 'center', textDecorationLine: 'underline' },
+  editHint: { fontSize: 11, color: COLORS.textSecondary, marginBottom: 16 },
+  switchError: { fontSize: 12, color: COLORS.danger, marginBottom: 8 },
 });
