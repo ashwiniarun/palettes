@@ -1,3 +1,4 @@
+import DecoPageBorder from '@/components/DecoPageBorder';
 import GlassCard from '@/components/GlassCard';
 import { SerifText, Text } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
@@ -6,7 +7,7 @@ import { CATEGORY_ORDER, Category, ClosetItem } from '@/lib/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, StyleSheet, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 const ROW_TINTS: (keyof typeof GLASS_TINTS)[] = ['lavender', 'coral', 'sage', 'blush'];
@@ -53,6 +54,12 @@ export default function RankingsScreen() {
     <View style={styles.screen}>
       <Stack.Screen options={{ title: handle ? `${handle}'s rankings` : 'your rankings' }} />
       <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <DecoPageBorder />
+      <Image
+        source={require('@/assets/images/vanity-mirror.png')}
+        style={styles.mirrorWatermark}
+        resizeMode="contain"
+      />
       <FlatList
         contentContainerStyle={{ padding: 16 }}
         data={rows}
@@ -86,6 +93,9 @@ export default function RankingsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
+  mirrorWatermark: {
+    position: 'absolute', top: 40, alignSelf: 'center', width: 280, height: 329, opacity: 0.42,
+  },
   sectionTitle: { fontSize: 15, marginBottom: 10, color: COLORS.ink },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   swatch: { width: 40, height: 40, borderRadius: RADII.sm, flexShrink: 0 },

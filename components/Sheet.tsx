@@ -1,7 +1,7 @@
-import { RADII, SHADOWS } from '@/lib/theme';
+import { COLORS, RADII, SHADOWS } from '@/lib/theme';
 import { BlurView } from 'expo-blur';
 import { ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, SlideInUp, SlideOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -20,6 +20,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // text inputs, and a bottom sheet puts those fields right where the keyboard
 // covers them with no keyboard-avoidance wired in. Top-anchoring keeps the
 // fields people are actually typing into above the keyboard's reach.
+//
+// The backdrop keeps a blur+dim scrim (an aesthetic-agnostic way to dim
+// whatever's behind a modal), but the sheet panel itself is a solid Deco
+// fill with a gold rule, not frosted glass — matching every other panel in
+// the app now.
 
 type SheetProps = { visible: boolean; onClose: () => void; children: ReactNode };
 
@@ -52,8 +57,15 @@ export default function Sheet({ visible, onClose, children }: SheetProps) {
           style={[styles.sheetOuter, { top: insets.top, height: sheetHeight }]}
         >
           <View style={styles.clip}>
-            <BlurView intensity={50} tint="light" style={StyleSheet.absoluteFill} />
-            <View style={styles.tint} />
+            <View style={styles.goldRule} />
+            <View style={styles.motifWrap}>
+              <Image
+                source={require('@/assets/images/deco-motif.png')}
+                tintColor={COLORS.gold}
+                resizeMode="contain"
+                style={styles.motif}
+              />
+            </View>
             <View style={styles.content}>{children}</View>
           </View>
         </Animated.View>
@@ -63,7 +75,7 @@ export default function Sheet({ visible, onClose, children }: SheetProps) {
 }
 
 const styles = StyleSheet.create({
-  dim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(54,43,29,0.35)' },
+  dim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
   sheetOuter: {
     position: 'absolute', left: 0, right: 0,
   },
@@ -72,10 +84,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderBottomLeftRadius: RADII.xl,
     borderBottomRightRadius: RADII.xl,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderTopWidth: 0,
-    borderColor: SHADOWS.glassBorder,
+    borderColor: SHADOWS.cardBorder,
+    backgroundColor: COLORS.surface,
   },
-  tint: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(246,229,231,0.78)' },
+  goldRule: { height: 2, backgroundColor: COLORS.gold },
+  motifWrap: { alignItems: 'center', paddingTop: 10, backgroundColor: COLORS.surface },
+  motif: { width: 140, height: 25 },
   content: { flex: 1 },
 });

@@ -1,3 +1,6 @@
+import DecoDivider from '@/components/DecoDivider';
+import DecoPhotoFrame from '@/components/DecoPhotoFrame';
+import DecoPageBorder from '@/components/DecoPageBorder';
 import GlassCard from '@/components/GlassCard';
 import NeumorphicButton from '@/components/NeumorphicButton';
 import Sheet from '@/components/Sheet';
@@ -14,23 +17,36 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator, Alert, FlatList, Image, Pressable,
-  ScrollView, StyleSheet, View,
+  ScrollView, StyleSheet, View, useWindowDimensions,
 } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated, {
+  Extrapolation, FadeInUp, interpolate, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const PLACEHOLDER = COLORS.inkSoft;
 const TILE_TINTS: (keyof typeof GLASS_TINTS)[] = ['coral', 'sage', 'blush'];
+const BANNER_HEIGHT = 210;
 
 export default function YouScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [closet, setCloset] = useState<ClosetItem[]>([]);
   const [looks, setLooks] = useState<Look[]>([]);
   const [loading, setLoading] = useState(true);
   const [postOpen, setPostOpen] = useState(false);
   const [switchOpen, setSwitchOpen] = useState(false);
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler(e => { scrollY.value = e.contentOffset.y; });
+  const bannerStyle = useAnimatedStyle(() => {
+    const translateY = interpolate(
+      scrollY.value, [0, BANNER_HEIGHT], [0, -BANNER_HEIGHT * 0.5], Extrapolation.CLAMP
+    );
+    const scale = interpolate(scrollY.value, [-BANNER_HEIGHT, 0], [1.8, 1], Extrapolation.CLAMP);
+    return { transform: [{ translateY }, { scale }] };
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -66,13 +82,33 @@ export default function YouScreen() {
   return (
     <View style={styles.screen}>
       <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <Image
+        source={require('@/assets/images/deco-shell.png')}
+        style={styles.shellWatermark}
+        resizeMode="contain"
+      />
+      <Animated.Image
+        source={require('@/assets/images/vanity-banner.png')}
+        resizeMode="cover"
+        style={[styles.vanityBannerAbs, { width: windowWidth }, bannerStyle]}
+      />
+      <DecoPageBorder />
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
+      <Animated.ScrollView
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingTop: BANNER_HEIGHT + 16, paddingHorizontal: 16, paddingBottom: 100 }}
+      >
         {profile && (
-          <GlassCard tint="blush" glow="coral" radius="xl" style={{ marginBottom: 16 }}>
+          <GlassCard tint="blush" glow="coral" radius="xl" ornate style={{ marginBottom: 16 }}>
             <View style={styles.profileHead}>
               <View style={[styles.avatar, { backgroundColor: profile.avatar_color }]}>
-                <SerifText style={styles.avatarText}>{profile.handle.slice(0, 2).toUpperCase()}</SerifText>
+                <Image
+                  source={require('@/assets/images/flapper-illustration.png')}
+                  style={styles.avatarIcon}
+                  tintColor={COLORS.gold}
+                  resizeMode="contain"
+                />
               </View>
               <View style={{ flex: 1 }}>
                 <SerifText style={styles.displayName}>{profile.handle}</SerifText>
@@ -110,6 +146,7 @@ export default function YouScreen() {
           </GlassCard>
         )}
 
+        <DecoDivider />
         <SerifText style={styles.sectionTitle}>your looks</SerifText>
         <FlatList
           data={looks}
@@ -120,7 +157,7 @@ export default function YouScreen() {
           renderItem={({ item, index }) => (
             <Animated.View entering={FadeInUp.delay(index * 40).springify()} style={{ flex: 1 }}>
               <GlassCard onPress={() => router.push(`/look/${item.id}`)} tint={TILE_TINTS[index % TILE_TINTS.length]} radius="md" padding={8} style={styles.lookTile}>
-                <Image source={{ uri: item.photo_url }} style={styles.lookImage} />
+                <DecoPhotoFrame uri={item.photo_url} radius="sm" style={styles.lookImage} />
                 <Text style={styles.lookCaption} numberOfLines={1}>{item.caption}</Text>
                 <Text style={styles.lookLikes}>{item.likes_count} likes</Text>
               </GlassCard>
@@ -132,7 +169,7 @@ export default function YouScreen() {
         <Pressable onPress={() => setSwitchOpen(true)} style={{ marginTop: 20 }}>
           <Text style={styles.switchAccountText}>switch test account (dev)</Text>
         </Pressable>
-      </ScrollView>
+      </Animated.ScrollView>
 
       <NeumorphicButton
         variant="fab"
@@ -371,9 +408,16 @@ function PostLookModal({ visible, closetItems, onClose, onPosted }: {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
+  shellWatermark: {
+    position: 'absolute', top: -34, alignSelf: 'center', width: 300, height: 294, opacity: 0.1,
+  },
+  vanityBannerAbs: { position: 'absolute', top: 0, left: 0, height: BANNER_HEIGHT },
   profileHead: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  avatar: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
-  avatarText: { color: '#fff', fontSize: 18 },
+  avatar: {
+    width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center',
+    flexShrink: 0, overflow: 'hidden',
+  },
+  avatarIcon: { width: '80%', height: '80%' },
   displayName: { fontSize: 20, color: COLORS.ink },
   bio: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   username: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4, fontWeight: '600' },

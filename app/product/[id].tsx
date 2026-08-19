@@ -1,3 +1,4 @@
+import DecoPageBorder from '@/components/DecoPageBorder';
 import GlassCard from '@/components/GlassCard';
 import NeumorphicButton from '@/components/NeumorphicButton';
 import Sheet from '@/components/Sheet';
@@ -183,8 +184,9 @@ export default function ProductDetailScreen() {
   return (
     <View style={styles.screen}>
       <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <DecoPageBorder />
       <ScrollView contentContainerStyle={{ padding: 16 }}>
-        <GlassCard tint="blush" radius="lg" style={{ marginBottom: 16 }}>
+        <GlassCard tint="blush" radius="lg" ornate style={{ marginBottom: 16 }}>
           <View style={styles.head}>
             <View style={[styles.swatch, { backgroundColor: item.color || item.product.default_color }]} />
             <View style={styles.headInfo}>

@@ -10,7 +10,7 @@ export default function TabLayout() {
     <Tabs
       tabBar={props => <GlassTabBar {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: COLORS.coral,
+        tabBarActiveTintColor: COLORS.gold,
         headerTitleStyle: { fontFamily: 'Fraunces_600SemiBold', fontSize: 22, color: COLORS.ink },
         headerBackground: () => <GlassHeaderBackground />,
       }}

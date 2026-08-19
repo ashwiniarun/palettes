@@ -1,3 +1,6 @@
+import DecoPhotoFrame from '@/components/DecoPhotoFrame';
+import EmptyState from '@/components/EmptyState';
+import DecoPageBorder from '@/components/DecoPageBorder';
 import GlassCard from '@/components/GlassCard';
 import { Text } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
@@ -115,6 +118,12 @@ export default function FeedScreen() {
   return (
     <View style={styles.screen}>
       <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <DecoPageBorder />
+      <Image
+        source={require('@/assets/images/deco-sunburst.png')}
+        style={styles.sunburst}
+        resizeMode="contain"
+      />
       <FlatList
         contentContainerStyle={{ padding: 16 }}
         data={looks}
@@ -132,7 +141,7 @@ export default function FeedScreen() {
           </Animated.View>
         )}
         ListEmptyComponent={
-          <Text style={styles.empty}>your feed is friends-only — add friends to start seeing their looks.</Text>
+          <EmptyState message="your feed is friends-only — add friends to start seeing their looks." />
         }
       />
     </View>
@@ -158,7 +167,7 @@ function LookCard({ look, tint, myProductIds, isLiked, likeCount, onToggleLike }
         </View>
       </View>
 
-      <Image source={{ uri: look.photo_url }} style={styles.photo} />
+      <DecoPhotoFrame uri={look.photo_url} radius="lg" style={styles.photo} />
 
       {count > 0 && (
         <Pressable style={styles.tagsToggle} onPress={() => setTagsOpen(o => !o)}>
@@ -204,6 +213,9 @@ function LookCard({ look, tint, myProductIds, isLiked, likeCount, onToggleLike }
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
+  sunburst: {
+    position: 'absolute', top: -50, alignSelf: 'center', width: 340, height: 322, opacity: 0.16,
+  },
   who: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   avatar: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: '#fff', fontSize: 12, fontWeight: '700' },
@@ -219,5 +231,4 @@ const styles = StyleSheet.create({
   likeBtn: { marginTop: 12, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5 },
   likeGlow: { shadowColor: COLORS.rose, shadowOpacity: 0.6, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } },
   likeText: { fontSize: 13, color: COLORS.ink },
-  empty: { textAlign: 'center', color: COLORS.textSecondary, padding: 60 },
 });

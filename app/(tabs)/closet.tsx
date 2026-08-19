@@ -1,5 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import BarcodeScannerModal from '@/components/BarcodeScannerModal';
+import CategoryIcon from '@/components/CategoryIcon';
+import EmptyState from '@/components/EmptyState';
+import DecoPageBorder from '@/components/DecoPageBorder';
 import GlassCard from '@/components/GlassCard';
 import NeumorphicButton from '@/components/NeumorphicButton';
 import Sheet from '@/components/Sheet';
@@ -13,22 +16,37 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, View,
+  ActivityIndicator, Pressable, ScrollView, StyleSheet, View, useWindowDimensions,
 } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated, {
+  Extrapolation, FadeInUp, interpolate, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ROW_TINTS: (keyof typeof GLASS_TINTS)[] = ['sage', 'coral', 'blush'];
 
 const PLACEHOLDER = COLORS.inkSoft;
+const BANNER_HEIGHT = 210;
 
 export default function ClosetScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const [items, setItems] = useState<ClosetItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [emptyOpen, setEmptyOpen] = useState(false);
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler(e => { scrollY.value = e.contentOffset.y; });
+  const bannerStyle = useAnimatedStyle(() => {
+    // Image lags behind the list at half-speed for a parallax feel, and
+    // stretches on iOS overscroll (scrollY < 0) instead of leaving a gap.
+    const translateY = interpolate(
+      scrollY.value, [0, BANNER_HEIGHT], [0, -BANNER_HEIGHT * 0.5], Extrapolation.CLAMP
+    );
+    const scale = interpolate(scrollY.value, [-BANNER_HEIGHT, 0], [1.8, 1], Extrapolation.CLAMP);
+    return { transform: [{ translateY }, { scale }] };
+  });
 
   const loadCloset = useCallback(async () => {
     setLoading(true);
@@ -59,24 +77,35 @@ export default function ClosetScreen() {
     <View style={styles.screen}>
       <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
 
-      <View style={styles.header}>
-        <SerifText style={styles.title}>your closet</SerifText>
-      </View>
+      <Animated.Image
+        source={require('@/assets/images/closet-banner.png')}
+        resizeMode="cover"
+        style={[styles.closetBannerAbs, { width: windowWidth }, bannerStyle]}
+      />
+      <DecoPageBorder />
 
-      <FlatList
+      <Animated.FlatList
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         data={grouped}
         keyExtractor={g => g.cat}
-        contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingTop: BANNER_HEIGHT + 8, paddingHorizontal: 16, paddingBottom: 100 }}
+        ListHeaderComponent={
+          <SerifText style={styles.title}>your closet</SerifText>
+        }
         renderItem={({ item: group, index: groupIndex }) => (
           <Animated.View entering={FadeInUp.delay(groupIndex * 40).springify()} style={{ marginBottom: 12 }}>
-            <SerifText style={styles.categoryTitle}>{group.cat}</SerifText>
+            <View style={styles.categoryRow}>
+              <CategoryIcon category={group.cat} size={26} />
+              <SerifText style={styles.categoryTitle}>{group.cat}</SerifText>
+            </View>
             {group.items.map((item, i) => (
               <ClosetRow key={item.id} item={item} tint={ROW_TINTS[i % ROW_TINTS.length]} onPress={() => router.push(`/product/${item.id}`)} />
             ))}
           </Animated.View>
         )}
         ListEmptyComponent={
-          grouped.length === 0 ? <Text style={styles.empty}>nothing in your closet yet — add your first product.</Text> : null
+          grouped.length === 0 ? <EmptyState message="nothing in your closet yet — add your first product." /> : null
         }
         ListFooterComponent={
           <View>
@@ -114,7 +143,7 @@ function ClosetRow({ item, onPress, showEmptyPill, tint }: {
   item: ClosetItem; onPress: () => void; showEmptyPill?: boolean; tint: keyof typeof GLASS_TINTS;
 }) {
   return (
-    <GlassCard onPress={onPress} tint={tint} radius="md" padding={12} style={styles.rowCard}>
+    <GlassCard onPress={onPress} tint={tint} radius="md" padding={12} plaque style={styles.rowCard}>
       <View style={styles.rowContent}>
         <View style={[styles.swatch, { backgroundColor: item.color || item.product.default_color }]} />
         <View style={{ flex: 1 }}>
@@ -356,9 +385,13 @@ function AddProductModal({ visible, onClose, onAdded }: {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
-  header: { padding: 16, paddingBottom: 0 },
-  title: { fontSize: 20, color: COLORS.ink },
-  categoryTitle: { fontSize: 13, fontWeight: '700', color: COLORS.ink, marginBottom: 8, textTransform: 'uppercase' },
+  title: {
+    fontSize: 20, color: COLORS.ink, marginTop: -64, marginBottom: 16,
+    textShadowColor: 'rgba(0,0,0,0.7)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6,
+  },
+  closetBannerAbs: { position: 'absolute', top: 0, left: 0, height: BANNER_HEIGHT },
+  categoryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  categoryTitle: { fontSize: 13, fontWeight: '700', color: COLORS.ink, textTransform: 'uppercase' },
   rowCard: { marginBottom: 10 },
   rowContent: { flexDirection: 'row', alignItems: 'center' },
   swatch: { width: 36, height: 36, borderRadius: RADII.sm, marginRight: 12 },
