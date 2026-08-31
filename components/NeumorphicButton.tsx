@@ -6,35 +6,39 @@ import { ReactNode, useState } from 'react';
 import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
-// Art Deco button: a bordered gold-outlined plate by default (dark fill,
-// light ink text), or — for `glow` variants — a solid jewel/gold gradient
-// fill (bold poster-plate look). This replaced the previous soft dual-shadow
-// neumorphic treatment entirely: soft-touch depth is the wrong material
-// language for Deco, which is bold flat color fields and crisp linework.
-// Pressed state inverts the default bordered variant (dark fill -> gold
-// fill, light text -> dark text) rather than trying to simulate a soft
-// press; gradient-filled buttons just dim slightly on press instead, so
-// their jewel color doesn't get replaced by gold on every tap.
+// RN gives each view exactly one shadow, so neumorphism's light+dark pair
+// needs two stacked, identically-sized views behind the content: one casts
+// the dark bottom-right shadow, one casts the light top-left shadow. Because
+// each shadow renders OUTSIDE that view's own bounds (via shadowOffset), the
+// two peek out on opposite corners without occluding each other, even though
+// both bodies share the same rect. Both shadow layers (and the visible body
+// fill) are absolutely positioned so they never affect layout — only the
+// content child is normally flowed, so it's what actually determines the
+// button's size for auto-sized variants (raised/pill); fixed-size variants
+// (circular/fab) size the outer box explicitly instead.
 //
-// Android note: shadowColor/shadowOpacity/shadowRadius are iOS-only in RN;
-// Android falls back to `elevation` on the glow shadow objects. Colored glow
-// is an iOS-only effect — Android will look flatter but not broken.
+// RN has no real inset/pressed shadow. The "pressed" state here is an honest
+// approximation: both shadow layers fade toward transparent and a thin inner
+// border appears, rather than literally inverting shadow geometry.
+//
+// Android note: shadowColor/shadowOpacity/shadowRadius/shadowOffset are
+// iOS-only in RN. Android falls back to `elevation` (single gray shadow, no
+// color) via the elevation field already present on SHADOWS.neuDark/glow*.
+// The dual colored shadow is an iOS-only effect — Android will look flatter.
 
 const GLOW_STYLES = {
   coral: SHADOWS.glowCoral,
   sage: SHADOWS.glowSage,
   rose: SHADOWS.glowRose,
   lavender: SHADOWS.glowLavender,
-  gold: SHADOWS.glowGold,
   none: null,
 };
 
 const GRADIENT_BY_GLOW = {
-  coral: [COLORS.coral, '#9C2B44'] as const,
-  sage: [COLORS.sage, COLORS.sageSoft] as const,
+  coral: [COLORS.sage, COLORS.coral] as const,
+  sage: [COLORS.sageSoft, COLORS.sage] as const,
   rose: [COLORS.blush, COLORS.rose] as const,
   lavender: [COLORS.blushLight, COLORS.lavender] as const,
-  gold: [COLORS.gold, COLORS.goldBright] as const,
 };
 
 type GlowColor = keyof typeof GLOW_STYLES;
@@ -76,12 +80,7 @@ export default function NeumorphicButton({
   const resolvedSize = size ?? (variant === 'fab' ? 56 : 44);
   const borderRadius = variant === 'pill' ? 999 : isFixedSize ? resolvedSize / 2 : RADII.md;
   const useGradient = glow !== 'none';
-  // Gold fills (the gold glow variant, or the bordered variant once pressed
-  // and inverted to a gold fill) are bright enough to need dark text; the
-  // jewel-tone gradients (burgundy/emerald/purple/teal) stay dark-medium
-  // enough for light text.
-  const needsDarkText = (!useGradient && pressed) || glow === 'gold';
-  const contentColor = needsDarkText ? COLORS.bg : COLORS.ink;
+  const contentColor = useGradient ? '#FFFFFF' : COLORS.ink;
 
   const outerStyle: ViewStyle = {
     borderRadius,
@@ -100,6 +99,18 @@ export default function NeumorphicButton({
       style={[disabled && styles.disabled, style]}
     >
       <Animated.View style={[outerStyle, animatedStyle]}>
+        <View
+          style={[
+            StyleSheet.absoluteFillObject, fillStyle, SHADOWS.neuDark,
+            { opacity: pressed ? 0.35 : 1 },
+          ]}
+        />
+        <View
+          style={[
+            StyleSheet.absoluteFillObject, fillStyle, SHADOWS.neuLight,
+            { opacity: pressed ? 0.3 : 1 },
+          ]}
+        />
         {useGradient ? (
           <LinearGradient
             colors={GRADIENT_BY_GLOW[glow as Exclude<GlowColor, 'none'>]}
@@ -108,15 +119,15 @@ export default function NeumorphicButton({
             style={[
               StyleSheet.absoluteFillObject, fillStyle,
               GLOW_STYLES[glow],
-              { opacity: pressed ? 0.85 : 1 },
+              pressed && styles.pressedBorder,
             ]}
           />
         ) : (
           <View
             style={[
               StyleSheet.absoluteFillObject, fillStyle,
-              { backgroundColor: pressed ? COLORS.gold : COLORS[tone] },
-              styles.border,
+              { backgroundColor: COLORS[tone] },
+              pressed && styles.pressedBorder,
             ]}
           />
         )}
@@ -151,9 +162,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  border: {
-    borderWidth: 1.5,
-    borderColor: COLORS.goldDull,
+  pressedBorder: {
+    borderWidth: 1,
+    borderColor: 'rgba(54,43,29,0.12)',
   },
   disabled: {
     opacity: 0.5,

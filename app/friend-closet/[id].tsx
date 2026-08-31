@@ -1,5 +1,3 @@
-import CategoryIcon from '@/components/CategoryIcon';
-import DecoPageBorder from '@/components/DecoPageBorder';
 import GlassCard from '@/components/GlassCard';
 import { SerifText, Text } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
@@ -42,17 +40,13 @@ export default function FriendClosetScreen() {
   return (
     <View style={styles.screen}>
       <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-      <DecoPageBorder />
       <FlatList
         contentContainerStyle={{ padding: 16 }}
         data={grouped}
         keyExtractor={g => g.cat}
         renderItem={({ item: group, index: groupIndex }) => (
           <Animated.View entering={FadeInUp.delay(groupIndex * 40).springify()} style={{ marginBottom: 12 }}>
-            <View style={styles.categoryRow}>
-              <CategoryIcon category={group.cat} size={26} />
-              <SerifText style={styles.categoryTitle}>{group.cat}</SerifText>
-            </View>
+            <SerifText style={styles.categoryTitle}>{group.cat}</SerifText>
             {group.items.map((ci, i) => (
               <GlassCard
                 key={ci.id}
@@ -60,7 +54,6 @@ export default function FriendClosetScreen() {
                 tint={ROW_TINTS[i % ROW_TINTS.length]}
                 radius="md"
                 padding={12}
-                plaque
                 style={{ marginBottom: 8 }}
               >
                 <View style={styles.itemInner}>
@@ -83,8 +76,7 @@ export default function FriendClosetScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
-  categoryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  categoryTitle: { fontSize: 13, fontWeight: '700', color: COLORS.ink, textTransform: 'uppercase' },
+  categoryTitle: { fontSize: 13, fontWeight: '700', color: COLORS.ink, marginBottom: 8, textTransform: 'uppercase' },
   itemInner: { flexDirection: 'row', alignItems: 'center' },
   swatch: { width: 36, height: 36, borderRadius: RADII.sm, marginRight: 12 },
   itemName: { fontSize: 13, fontWeight: '600', color: COLORS.ink },

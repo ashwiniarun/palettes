@@ -1,5 +1,3 @@
-import EmptyState from '@/components/EmptyState';
-import DecoPageBorder from '@/components/DecoPageBorder';
 import GlassCard from '@/components/GlassCard';
 import NeumorphicButton from '@/components/NeumorphicButton';
 import { SerifText, Text, TextInput } from '@/components/ThemedText';
@@ -108,7 +106,6 @@ export default function FriendsScreen() {
   return (
     <View style={styles.screen}>
       <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-      <DecoPageBorder />
 
       <TextInput
         style={styles.searchInput}
@@ -156,7 +153,7 @@ export default function FriendsScreen() {
             }
             return renderRow(profile, { type: 'friends' }, index);
           }}
-          ListEmptyComponent={<EmptyState message="no friends yet — search above to find people." />}
+          ListEmptyComponent={<Text style={styles.empty}>no friends yet — search above to find people.</Text>}
         />
       )}
     </View>

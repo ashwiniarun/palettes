@@ -1,5 +1,3 @@
-import DecoPhotoFrame from '@/components/DecoPhotoFrame';
-import DecoPageBorder from '@/components/DecoPageBorder';
 import GlassCard from '@/components/GlassCard';
 import NeumorphicButton from '@/components/NeumorphicButton';
 import Sheet from '@/components/Sheet';
@@ -10,7 +8,7 @@ import { CATEGORY_ORDER, ClosetItem } from '@/lib/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 const PLACEHOLDER = COLORS.inkSoft;
 
@@ -73,11 +71,10 @@ export default function LookDetailScreen() {
   return (
     <View style={styles.screen}>
       <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-      <DecoPageBorder />
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Text style={styles.handle}>{look.poster.handle}</Text>
         <Text style={styles.caption}>{look.caption}</Text>
-        <DecoPhotoFrame uri={look.photo_url} radius="lg" style={styles.photo} />
+        <Image source={{ uri: look.photo_url }} style={styles.photo} />
 
         {isYours && (
           <View style={styles.actionRow}>

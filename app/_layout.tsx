@@ -1,6 +1,6 @@
 import { Fraunces_600SemiBold } from '@expo-google-fonts/fraunces';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
-import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -8,14 +8,10 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import GlassHeaderBackground from '@/components/GlassHeaderBackground';
+import { useColorScheme } from '@/components/useColorScheme';
 import { supabase } from '@/lib/supabase';
 import { COLORS } from '@/lib/theme';
 
-// The app has no real light/dark mode toggle — every screen hardcodes
-// COLORS.* tokens directly — so this Deco theme is used unconditionally
-// regardless of the device's system color scheme, rather than falling back
-// to React Navigation's unrelated stock DarkTheme. Avoids a flash of a stock
-// light theme before custom screen backgrounds paint, too.
 const PalettesTheme = {
   ...DefaultTheme,
   colors: {
@@ -24,7 +20,7 @@ const PalettesTheme = {
     card: COLORS.bg,
     text: COLORS.ink,
     border: COLORS.border,
-    primary: COLORS.gold,
+    primary: COLORS.coral,
   },
 };
 
@@ -77,13 +73,15 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
+  const colorScheme = useColorScheme();
+
   return (
-    <ThemeProvider value={PalettesTheme}>
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : PalettesTheme}>
       <Stack
         screenOptions={{
           headerBackground: () => <GlassHeaderBackground />,
           headerTitleStyle: { fontFamily: 'Fraunces_600SemiBold', color: COLORS.ink },
-          headerTintColor: COLORS.gold,
+          headerTintColor: COLORS.coral,
           headerBackTitle: 'back',
         }}
       >

@@ -1,5 +1,3 @@
-import DecoPhotoFrame from '@/components/DecoPhotoFrame';
-import DecoPageBorder from '@/components/DecoPageBorder';
 import GlassCard from '@/components/GlassCard';
 import NeumorphicButton from '@/components/NeumorphicButton';
 import { SerifText, Text } from '@/components/ThemedText';
@@ -10,7 +8,7 @@ import { Look, Profile } from '@/lib/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, StyleSheet, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 const TILE_TINTS: (keyof typeof GLASS_TINTS)[] = ['coral', 'sage', 'blush'];
@@ -52,7 +50,6 @@ export default function FriendProfileScreen() {
     <View style={styles.screen}>
       <Stack.Screen options={{ title: profile.handle }} />
       <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-      <DecoPageBorder />
       <FlatList
         contentContainerStyle={{ padding: 16 }}
         data={looks}
@@ -61,7 +58,7 @@ export default function FriendProfileScreen() {
         columnWrapperStyle={{ gap: 10 }}
         ListHeaderComponent={
           <View>
-            <GlassCard tint="blush" glow="coral" radius="xl" ornate style={{ marginBottom: 16 }}>
+            <GlassCard tint="blush" glow="coral" radius="xl" style={{ marginBottom: 16 }}>
               <View style={styles.head}>
                 <View style={[styles.avatar, { backgroundColor: profile.avatar_color }]}>
                   <Text style={styles.avatarText}>{profile.handle.slice(0, 2).toUpperCase()}</Text>
@@ -74,7 +71,7 @@ export default function FriendProfileScreen() {
             </GlassCard>
 
             {twin && (
-              <GlassCard tint="lavender" glow="lavender" radius="xl" ornate style={{ marginBottom: 16 }}>
+              <GlassCard tint="lavender" glow="lavender" radius="xl" style={{ marginBottom: 16 }}>
                 <View style={{ alignItems: 'center' }}>
                   <SerifText style={styles.twinScore}>{twin.score}%</SerifText>
                   <Text style={styles.twinLabel}>closet twins</Text>
@@ -103,7 +100,7 @@ export default function FriendProfileScreen() {
         renderItem={({ item, index }) => (
           <Animated.View entering={FadeInUp.delay(index * 40).springify()} style={{ flex: 1 }}>
             <GlassCard onPress={() => router.push(`/look/${item.id}`)} tint={TILE_TINTS[index % TILE_TINTS.length]} radius="md" padding={8} style={{ marginBottom: 10 }}>
-              <DecoPhotoFrame uri={item.photo_url} radius="sm" style={styles.lookImage} />
+              <Image source={{ uri: item.photo_url }} style={styles.lookImage} />
               <Text numberOfLines={1} style={styles.lookCaption}>{item.caption}</Text>
             </GlassCard>
           </Animated.View>
