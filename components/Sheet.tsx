@@ -1,4 +1,5 @@
-import { RADII, SHADOWS } from '@/lib/theme';
+import { makeStyles } from '@/lib/ThemeContext';
+import { RADII } from '@/lib/theme';
 import { BlurView } from 'expo-blur';
 import { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -25,6 +26,7 @@ type SheetProps = { visible: boolean; onClose: () => void; children: ReactNode }
 
 export default function Sheet({ visible, onClose, children }: SheetProps) {
   const insets = useSafeAreaInsets();
+  const styles = useStyles();
   const { height: windowHeight } = useWindowDimensions();
   if (!visible) return null;
 
@@ -62,8 +64,8 @@ export default function Sheet({ visible, onClose, children }: SheetProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  dim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(54,43,29,0.35)' },
+const useStyles = makeStyles(({ colors }) => ({
+  dim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.3)' },
   sheetOuter: {
     position: 'absolute', left: 0, right: 0,
   },
@@ -74,8 +76,9 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: RADII.xl,
     borderWidth: 1,
     borderTopWidth: 0,
-    borderColor: SHADOWS.glassBorder,
+    borderColor: colors.glassEdge,
   },
-  tint: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(246,229,231,0.78)' },
+  // the sheet floats over busy content, so it gets the denser glass
+  tint: { ...StyleSheet.absoluteFill, backgroundColor: colors.glassStrong },
   content: { flex: 1 },
-});
+}));

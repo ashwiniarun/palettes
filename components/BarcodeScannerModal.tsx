@@ -1,4 +1,4 @@
-import { COLORS } from '@/lib/theme';
+import { makeStyles } from '@/lib/ThemeContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRef } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
@@ -7,6 +7,7 @@ import { Text } from './ThemedText';
 export default function BarcodeScannerModal({ visible, onClose, onScanned }: {
   visible: boolean; onClose: () => void; onScanned: (code: string) => void;
 }) {
+  const styles = useStyles();
   const [permission, requestPermission] = useCameraPermissions();
   const handledRef = useRef(false);
 
@@ -58,15 +59,15 @@ export default function BarcodeScannerModal({ visible, onClose, onScanned }: {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(({ colors }) => ({
   screen: { flex: 1, backgroundColor: '#000' },
   overlay: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  frame: { width: 240, height: 140, borderWidth: 2, borderColor: COLORS.coral, borderRadius: 12 },
+  frame: { width: 240, height: 140, borderWidth: 2, borderColor: colors.primary, borderRadius: 12 },
   hint: { color: '#fff', fontSize: 13, marginTop: 16 },
   permissionBox: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30, gap: 16 },
   permissionText: { color: '#fff', fontSize: 14, textAlign: 'center' },
-  grantBtn: { backgroundColor: COLORS.sage, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 20 },
-  grantBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
+  grantBtn: { backgroundColor: colors.primary, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 20 },
+  grantBtnText: { color: colors.onPrimary, fontWeight: '600', fontSize: 13 },
   cancelBtn: { position: 'absolute', top: 50, right: 20, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, paddingVertical: 8, paddingHorizontal: 16 },
   cancelText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-});
+}));

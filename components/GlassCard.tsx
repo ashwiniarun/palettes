@@ -1,12 +1,14 @@
-import { GLASS_TINTS, RADII, SHADOWS } from '@/lib/theme';
+import { makeStyles, useTheme } from '@/lib/ThemeContext';
+import { RADII } from '@/lib/theme';
 import { BlurView } from 'expo-blur';
 import { ReactNode } from 'react';
 import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
-// Glass surfaces get their own colored tint (not a plain white wash) so they
-// read as colorful tinted glass rather than frosted neutral — a white wash
-// over blur stays pale no matter how saturated the background underneath is.
+// Every card in the app is the same glass panel: real blur over the
+// backdrop's color pools, tinted with the theme's glass swatch, with a bright
+// rim along the edge. One look everywhere — emphasis comes from `glow`
+// (hero/highlight cards) rather than from switching card colors.
 //
 // Android note: expo-blur's BlurView defaults to `experimentalBlurMethod:
 // 'none'` on Android, which the native module itself already renders as a
@@ -15,41 +17,30 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 // extra handling here. iOS gets the real blur. This is a real visual
 // difference between platforms, not a bug.
 
-const GLOW_STYLES = {
-  coral: SHADOWS.glowCoral,
-  sage: SHADOWS.glowSage,
-  rose: SHADOWS.glowRose,
-  lavender: SHADOWS.glowLavender,
-  none: null,
-};
-
-type GlowColor = keyof typeof GLOW_STYLES;
-
 type GlassCardProps = {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
   radius?: keyof typeof RADII;
   intensity?: number;
-  glow?: GlowColor;
-  tint?: keyof typeof GLASS_TINTS;
+  glow?: boolean;
   padding?: number;
   onPress?: () => void;
 };
 
 export default function GlassCard({
-  children, style, radius = 'lg', intensity = 40, glow = 'none',
-  tint = 'neutral', padding = 14, onPress,
+  children, style, radius = 'lg', intensity = 40, glow = false, padding = 14, onPress,
 }: GlassCardProps) {
+  const { theme } = useTheme();
+  const styles = useStyles();
   const borderRadius = RADII[radius];
-  const glowStyle = GLOW_STYLES[glow];
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   const card = (
-    <Animated.View style={[glowStyle, onPress ? animatedStyle : null, style]}>
+    <Animated.View style={[glow ? theme.shadows.glow : theme.shadows.card, onPress ? animatedStyle : null, style]}>
       <View style={[styles.clip, { borderRadius }]}>
         <BlurView intensity={intensity} tint="light" style={StyleSheet.absoluteFill} />
-        <View style={[styles.tint, { borderRadius, backgroundColor: GLASS_TINTS[tint] }]} />
+        <View style={[styles.tint, glow && styles.tintStrong]} />
         <View style={{ padding }}>{children}</View>
       </View>
     </Animated.View>
@@ -68,13 +59,12 @@ export default function GlassCard({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(({ colors }) => ({
   clip: {
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: SHADOWS.glassBorder,
+    borderColor: colors.glassEdge,
   },
-  tint: {
-    ...StyleSheet.absoluteFillObject,
-  },
-});
+  tint: { ...StyleSheet.absoluteFill, backgroundColor: colors.glass },
+  tintStrong: { backgroundColor: colors.glassStrong },
+}));

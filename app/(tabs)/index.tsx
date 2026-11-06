@@ -1,10 +1,11 @@
+import AppBackground from '@/components/AppBackground';
 import GlassCard from '@/components/GlassCard';
 import { Text } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
-import { COLORS, GLASS_TINTS, GRADIENTS, RADII } from '@/lib/theme';
+import { makeStyles, useColors } from '@/lib/ThemeContext';
+import { RADII } from '@/lib/theme';
 import { FeedLook } from '@/lib/types';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -12,9 +13,9 @@ import {
 } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
-const CARD_TINTS: (keyof typeof GLASS_TINTS)[] = ['sage', 'coral', 'blush'];
-
 export default function FeedScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const [looks, setLooks] = useState<FeedLook[]>([]);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [myProductIds, setMyProductIds] = useState<Set<string>>(new Set());
@@ -110,11 +111,11 @@ export default function FeedScreen() {
     }
   }
 
-  if (loading) return <View style={styles.center}><ActivityIndicator color={COLORS.sage} /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;
 
   return (
     <View style={styles.screen}>
-      <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <AppBackground />
       <FlatList
         contentContainerStyle={{ padding: 16 }}
         data={looks}
@@ -123,7 +124,7 @@ export default function FeedScreen() {
           <Animated.View entering={FadeInUp.delay(index * 40).springify()}>
             <LookCard
               look={item}
-              tint={CARD_TINTS[index % CARD_TINTS.length]}
+             
               myProductIds={myProductIds}
               isLiked={likedIds.has(item.id)}
               likeCount={item.likes[0]?.count ?? 0}
@@ -139,17 +140,19 @@ export default function FeedScreen() {
   );
 }
 
-function LookCard({ look, tint, myProductIds, isLiked, likeCount, onToggleLike }: {
-  look: FeedLook; tint: keyof typeof GLASS_TINTS; myProductIds: Set<string>;
+function LookCard({ look, myProductIds, isLiked, likeCount, onToggleLike }: {
+  look: FeedLook; myProductIds: Set<string>;
   isLiked: boolean; likeCount: number; onToggleLike: () => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const [tagsOpen, setTagsOpen] = useState(false);
   const count = look.look_products.length;
 
   return (
-    <GlassCard tint={tint} radius="lg" style={{ marginBottom: 16 }}>
+    <GlassCard radius="lg" style={{ marginBottom: 16 }}>
       <View style={styles.who}>
-        <View style={[styles.avatar, { backgroundColor: look.poster.avatar_color }]}>
+        <View style={styles.avatar}>
           <Text style={styles.avatarText}>{look.poster.handle.slice(0, 2).toUpperCase()}</Text>
         </View>
         <View>
@@ -162,9 +165,9 @@ function LookCard({ look, tint, myProductIds, isLiked, likeCount, onToggleLike }
 
       {count > 0 && (
         <Pressable style={styles.tagsToggle} onPress={() => setTagsOpen(o => !o)}>
-          <Ionicons name="pricetag-outline" size={13} color={COLORS.ink} />
+          <Ionicons name="pricetag-outline" size={13} color={colors.text} />
           <Text style={styles.tagsToggleText}>{count} product{count === 1 ? '' : 's'} tagged</Text>
-          <Ionicons name={tagsOpen ? 'chevron-up' : 'chevron-down'} size={14} color={COLORS.ink} />
+          <Ionicons name={tagsOpen ? 'chevron-up' : 'chevron-down'} size={14} color={colors.text} />
         </Pressable>
       )}
 
@@ -175,7 +178,7 @@ function LookCard({ look, tint, myProductIds, isLiked, likeCount, onToggleLike }
             return (
               <View
                 key={i}
-                style={[styles.tag, { backgroundColor: inCloset ? COLORS.sageSoft + '33' : COLORS.lavenderTint }]}
+                style={[styles.tag, { backgroundColor: inCloset ? colors.secondary : colors.bg }]}
               >
                 <Text style={styles.tagName}>{lp.closet_item.product.brand} {lp.closet_item.product.name}</Text>
                 <Text style={styles.tagDetail}>
@@ -192,32 +195,32 @@ function LookCard({ look, tint, myProductIds, isLiked, likeCount, onToggleLike }
         <Ionicons
           name={isLiked ? 'heart' : 'heart-outline'}
           size={16}
-          color={isLiked ? COLORS.rose : COLORS.ink}
+          color={isLiked ? colors.danger : colors.text}
           style={isLiked ? styles.likeGlow : undefined}
         />
-        <Text style={[styles.likeText, isLiked && { color: COLORS.rose }]}>{likeCount}</Text>
+        <Text style={[styles.likeText, isLiked && { color: colors.danger }]}>{likeCount}</Text>
       </Pressable>
     </GlassCard>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
+const useStyles = makeStyles(({ colors }) => ({
+  screen: { flex: 1, backgroundColor: colors.bg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg },
   who: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  avatar: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  handle: { fontSize: 13, fontWeight: '700', color: COLORS.ink },
-  caption: { fontSize: 12, color: COLORS.textSecondary },
-  photo: { width: '100%', aspectRatio: 1, borderRadius: 12, backgroundColor: COLORS.blushLight },
+  avatar: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primary },
+  avatarText: { color: colors.onPrimary, fontSize: 12, fontWeight: '700' },
+  handle: { fontSize: 13, fontWeight: '700', color: colors.text },
+  caption: { fontSize: 12, color: colors.textMuted },
+  photo: { width: '100%', aspectRatio: 1, borderRadius: 12, backgroundColor: colors.glass },
   tagsToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, alignSelf: 'flex-start' },
-  tagsToggleText: { fontSize: 12, fontWeight: '600', color: COLORS.ink },
+  tagsToggleText: { fontSize: 12, fontWeight: '600', color: colors.text },
   tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
   tag: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: RADII.sm, maxWidth: '100%' },
-  tagName: { fontSize: 11, fontWeight: '600', color: COLORS.ink },
-  tagDetail: { fontSize: 10, color: COLORS.textSecondary, marginTop: 2 },
+  tagName: { fontSize: 11, fontWeight: '600', color: colors.text },
+  tagDetail: { fontSize: 10, color: colors.textMuted, marginTop: 2 },
   likeBtn: { marginTop: 12, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5 },
-  likeGlow: { shadowColor: COLORS.rose, shadowOpacity: 0.6, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } },
-  likeText: { fontSize: 13, color: COLORS.ink },
-  empty: { textAlign: 'center', color: COLORS.textSecondary, padding: 60 },
-});
+  likeGlow: { shadowColor: colors.danger, shadowOpacity: 0.6, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } },
+  likeText: { fontSize: 13, color: colors.text },
+  empty: { textAlign: 'center', color: colors.textMuted, padding: 60 },
+}));

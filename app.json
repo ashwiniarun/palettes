@@ -21,7 +21,7 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -46,7 +46,10 @@
           "photosPermission": "Palettes uses your photo library so you can post a look.",
           "cameraPermission": "Palettes uses your camera so you can take a photo for a look."
         }
-      ]
+      ],
+      "expo-font",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

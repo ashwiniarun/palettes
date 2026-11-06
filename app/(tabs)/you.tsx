@@ -1,14 +1,15 @@
+import AppBackground from '@/components/AppBackground';
 import GlassCard from '@/components/GlassCard';
 import NeumorphicButton from '@/components/NeumorphicButton';
 import Sheet from '@/components/Sheet';
 import { SerifText, Text, TextInput } from '@/components/ThemedText';
 import { resizeForUpload } from '@/lib/imageResize';
 import { supabase } from '@/lib/supabase';
-import { COLORS, GLASS_TINTS, GRADIENTS, RADII, TAB_BAR_BASE_HEIGHT } from '@/lib/theme';
+import { makeStyles, useColors } from '@/lib/ThemeContext';
+import { RADII, TAB_BAR_BASE_HEIGHT } from '@/lib/theme';
 import { CATEGORY_ORDER, ClosetItem, Look, Profile } from '@/lib/types';
 import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system/legacy';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -19,10 +20,9 @@ import {
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const PLACEHOLDER = COLORS.inkSoft;
-const TILE_TINTS: (keyof typeof GLASS_TINTS)[] = ['coral', 'sage', 'blush'];
-
 export default function YouScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -61,17 +61,16 @@ export default function YouScreen() {
   const empty = closet.filter(c => c.status === 'empty');
   const mostWorn = [...closet].sort((a, b) => b.times_worn - a.times_worn)[0];
 
-  if (loading) return <View style={styles.center}><ActivityIndicator color={COLORS.sage} /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;
 
   return (
     <View style={styles.screen}>
-      <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-
+      <AppBackground />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
         {profile && (
-          <GlassCard tint="blush" glow="coral" radius="xl" style={{ marginBottom: 16 }}>
+          <GlassCard glow radius="xl" style={{ marginBottom: 16 }}>
             <View style={styles.profileHead}>
-              <View style={[styles.avatar, { backgroundColor: profile.avatar_color }]}>
+              <View style={styles.avatar}>
                 <SerifText style={styles.avatarText}>{profile.handle.slice(0, 2).toUpperCase()}</SerifText>
               </View>
               <View style={{ flex: 1 }}>
@@ -84,19 +83,19 @@ export default function YouScreen() {
         )}
 
         <View style={styles.statGrid}>
-          <GlassCard tint="sage" radius="md" padding={12} style={{ flex: 1 }}>
+          <GlassCard radius="md" padding={12} style={{ flex: 1 }}>
             <View style={styles.statInner}>
               <SerifText style={styles.statNum}>{active.length}</SerifText>
               <Text style={styles.statLabel}>in closet</Text>
             </View>
           </GlassCard>
-          <GlassCard tint="coral" radius="md" padding={12} style={{ flex: 1 }}>
+          <GlassCard radius="md" padding={12} style={{ flex: 1 }}>
             <View style={styles.statInner}>
               <SerifText style={styles.statNum}>{empty.length}</SerifText>
               <Text style={styles.statLabel}>empties</Text>
             </View>
           </GlassCard>
-          <GlassCard tint="blush" radius="md" padding={12} style={{ flex: 1 }}>
+          <GlassCard radius="md" padding={12} style={{ flex: 1 }}>
             <View style={styles.statInner}>
               <SerifText style={styles.statNum} numberOfLines={1}>{mostWorn?.product.brand || '—'}</SerifText>
               <Text style={styles.statLabel}>most worn</Text>
@@ -105,7 +104,7 @@ export default function YouScreen() {
         </View>
 
         {profile && (
-          <GlassCard onPress={() => router.push(`/rankings/${profile.id}`)} tint="lavender" glow="lavender" radius="md" padding={12} style={{ marginBottom: 16 }}>
+          <GlassCard onPress={() => router.push(`/rankings/${profile.id}`)} radius="md" padding={12} style={{ marginBottom: 16 }}>
             <Text style={styles.rankingsText}>your rankings →</Text>
           </GlassCard>
         )}
@@ -119,7 +118,7 @@ export default function YouScreen() {
           scrollEnabled={false}
           renderItem={({ item, index }) => (
             <Animated.View entering={FadeInUp.delay(index * 40).springify()} style={{ flex: 1 }}>
-              <GlassCard onPress={() => router.push(`/look/${item.id}`)} tint={TILE_TINTS[index % TILE_TINTS.length]} radius="md" padding={8} style={styles.lookTile}>
+              <GlassCard onPress={() => router.push(`/look/${item.id}`)} radius="md" padding={8} style={styles.lookTile}>
                 <Image source={{ uri: item.photo_url }} style={styles.lookImage} />
                 <Text style={styles.lookCaption} numberOfLines={1}>{item.caption}</Text>
                 <Text style={styles.lookLikes}>{item.likes_count} likes</Text>
@@ -137,7 +136,7 @@ export default function YouScreen() {
       <NeumorphicButton
         variant="fab"
         icon="camera"
-        glow="coral"
+        fill="primary"
         onPress={() => setPostOpen(true)}
         style={[styles.fab, { bottom: TAB_BAR_BASE_HEIGHT + Math.max(insets.bottom, 10) + 16 }]}
       />
@@ -161,6 +160,8 @@ export default function YouScreen() {
 function SwitchAccountModal({ visible, onClose, onSwitched }: {
   visible: boolean; onClose: () => void; onSwitched: () => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [signingIn, setSigningIn] = useState(false);
@@ -191,7 +192,7 @@ function SwitchAccountModal({ visible, onClose, onSwitched }: {
         <TextInput
           style={styles.input}
           placeholder="email"
-          placeholderTextColor={PLACEHOLDER}
+          placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
@@ -201,7 +202,7 @@ function SwitchAccountModal({ visible, onClose, onSwitched }: {
         <TextInput
           style={styles.input}
           placeholder="password"
-          placeholderTextColor={PLACEHOLDER}
+          placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           autoCorrect={false}
           secureTextEntry
@@ -212,7 +213,7 @@ function SwitchAccountModal({ visible, onClose, onSwitched }: {
 
         <NeumorphicButton
           label={signingIn ? 'signing in...' : 'sign in'}
-          glow="coral"
+          fill="primary"
           disabled={signingIn || !email.trim() || !password}
           onPress={handleSignIn}
           style={{ marginTop: 8 }}
@@ -226,6 +227,8 @@ function SwitchAccountModal({ visible, onClose, onSwitched }: {
 function PostLookModal({ visible, closetItems, onClose, onPosted }: {
   visible: boolean; closetItems: ClosetItem[]; onClose: () => void; onPosted: () => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const [image, setImage] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -316,7 +319,7 @@ function PostLookModal({ visible, closetItems, onClose, onPosted }: {
 
         <Pressable style={styles.photoPicker} onPress={choosePhoto} disabled={processingPhoto}>
           {processingPhoto ? (
-            <ActivityIndicator color={COLORS.sage} />
+            <ActivityIndicator color={colors.primary} />
           ) : image ? (
             <Image source={{ uri: image }} style={styles.photoPreview} />
           ) : (
@@ -330,7 +333,7 @@ function PostLookModal({ visible, closetItems, onClose, onPosted }: {
         <TextInput
           style={styles.input}
           placeholder="caption this look..."
-          placeholderTextColor={PLACEHOLDER}
+          placeholderTextColor={colors.textMuted}
           value={caption}
           onChangeText={setCaption}
           multiline
@@ -357,7 +360,7 @@ function PostLookModal({ visible, closetItems, onClose, onPosted }: {
 
         <NeumorphicButton
           label={saving ? 'posting...' : 'post look'}
-          glow="coral"
+          fill="primary"
           disabled={saving || !image || !caption.trim() || selected.size === 0}
           onPress={handlePost}
           style={{ marginTop: 16 }}
@@ -368,48 +371,48 @@ function PostLookModal({ visible, closetItems, onClose, onPosted }: {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
+const useStyles = makeStyles(({ colors }) => ({
+  screen: { flex: 1, backgroundColor: colors.bg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg },
   profileHead: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  avatar: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
-  avatarText: { color: '#fff', fontSize: 18 },
-  displayName: { fontSize: 20, color: COLORS.ink },
-  bio: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
-  username: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4, fontWeight: '600' },
+  avatar: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', flexShrink: 0, backgroundColor: colors.primary },
+  avatarText: { color: colors.onPrimary, fontSize: 18 },
+  displayName: { fontSize: 20, color: colors.text },
+  bio: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  username: { fontSize: 12, color: colors.textMuted, marginTop: 4, fontWeight: '600' },
   statGrid: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   statInner: { alignItems: 'center' },
-  statNum: { fontSize: 17, color: COLORS.ink },
-  statLabel: { fontSize: 10, color: COLORS.textSecondary, marginTop: 2 },
-  rankingsText: { textAlign: 'center', fontWeight: '600', fontSize: 13, color: COLORS.ink },
-  sectionTitle: { fontSize: 15, marginBottom: 10, color: COLORS.ink },
+  statNum: { fontSize: 17, color: colors.primaryText },
+  statLabel: { fontSize: 10, color: colors.textMuted, marginTop: 2 },
+  rankingsText: { textAlign: 'center', fontWeight: '600', fontSize: 13, color: colors.primaryText },
+  sectionTitle: { fontSize: 15, marginBottom: 10, color: colors.text },
   lookTile: { marginBottom: 10 },
-  lookImage: { width: '100%', aspectRatio: 1, borderRadius: RADII.sm, marginBottom: 6, backgroundColor: COLORS.blushLight },
-  lookCaption: { fontSize: 11, color: COLORS.ink },
-  lookLikes: { fontSize: 10, color: COLORS.textSecondary, marginTop: 2 },
-  empty: { textAlign: 'center', color: COLORS.textSecondary, padding: 30 },
+  lookImage: { width: '100%', aspectRatio: 1, borderRadius: RADII.sm, marginBottom: 6, backgroundColor: colors.glass },
+  lookCaption: { fontSize: 11, color: colors.text },
+  lookLikes: { fontSize: 10, color: colors.textMuted, marginTop: 2 },
+  empty: { textAlign: 'center', color: colors.textMuted, padding: 30 },
   fab: { position: 'absolute', right: 20 },
-  modalTitle: { fontSize: 18, marginBottom: 16, color: COLORS.ink },
+  modalTitle: { fontSize: 18, marginBottom: 16, color: colors.text },
   photoPicker: {
-    width: '100%', aspectRatio: 1, borderWidth: 1, borderColor: COLORS.coral, borderStyle: 'dashed',
-    borderRadius: RADII.lg, justifyContent: 'center', alignItems: 'center', marginBottom: 8, backgroundColor: COLORS.cream,
+    width: '100%', aspectRatio: 1, borderWidth: 1, borderColor: colors.primary, borderStyle: 'dashed',
+    borderRadius: RADII.lg, justifyContent: 'center', alignItems: 'center', marginBottom: 8, backgroundColor: colors.glassStrong,
   },
-  photoPickerText: { color: COLORS.textSecondary },
+  photoPickerText: { color: colors.textMuted },
   photoPreview: { width: '100%', height: '100%', borderRadius: RADII.lg },
-  retakeText: { fontSize: 11, color: COLORS.textSecondary, textAlign: 'center', marginTop: -4, marginBottom: 10 },
+  retakeText: { fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: -4, marginBottom: 10 },
   input: {
-    borderRadius: RADII.md, padding: 10, marginBottom: 12, backgroundColor: COLORS.cream, minHeight: 44, color: COLORS.ink,
-    shadowColor: COLORS.sageDeep, shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: -2, height: -2 },
+    borderRadius: RADII.md, padding: 10, marginBottom: 12, backgroundColor: colors.glassStrong, minHeight: 44, color: colors.text,
+    shadowColor: colors.text, shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: -2, height: -2 },
   },
-  tagCount: { fontSize: 11, color: COLORS.textSecondary, marginBottom: 8 },
-  catLabel: { fontSize: 11, fontWeight: '700', color: COLORS.sageDeep, textTransform: 'uppercase', marginTop: 10, marginBottom: 6 },
-  tagRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.cream, padding: 8, borderRadius: RADII.sm, marginBottom: 6 },
-  checkbox: { width: 16, height: 16, borderWidth: 1, borderColor: COLORS.border, borderRadius: 4 },
-  checkboxChecked: { backgroundColor: COLORS.coral, borderColor: COLORS.coral },
+  tagCount: { fontSize: 11, color: colors.textMuted, marginBottom: 8 },
+  catLabel: { fontSize: 11, fontWeight: '700', color: colors.text, textTransform: 'uppercase', marginTop: 10, marginBottom: 6 },
+  tagRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.glassStrong, padding: 8, borderRadius: RADII.sm, marginBottom: 6 },
+  checkbox: { width: 16, height: 16, borderWidth: 1, borderColor: colors.border, borderRadius: 4 },
+  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
   swatchSm: { width: 22, height: 22, borderRadius: 6 },
-  tagName: { fontSize: 12, flex: 1, color: COLORS.ink },
-  cancelText: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 12, marginBottom: 20 },
-  switchAccountText: { fontSize: 11, color: COLORS.textSecondary, textAlign: 'center', textDecorationLine: 'underline' },
-  editHint: { fontSize: 11, color: COLORS.textSecondary, marginBottom: 16 },
-  switchError: { fontSize: 12, color: COLORS.danger, marginBottom: 8 },
-});
+  tagName: { fontSize: 12, flex: 1, color: colors.text },
+  cancelText: { textAlign: 'center', color: colors.textMuted, marginTop: 12, marginBottom: 20 },
+  switchAccountText: { fontSize: 11, color: colors.textMuted, textAlign: 'center', textDecorationLine: 'underline' },
+  editHint: { fontSize: 11, color: colors.textMuted, marginBottom: 16 },
+  switchError: { fontSize: 12, color: colors.danger, marginBottom: 8 },
+}));

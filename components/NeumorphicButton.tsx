@@ -1,7 +1,7 @@
 import { Text } from '@/components/ThemedText';
-import { COLORS, RADII, SHADOWS } from '@/lib/theme';
+import { makeStyles, useTheme } from '@/lib/ThemeContext';
+import { RADII } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ReactNode, useState } from 'react';
 import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -23,25 +23,10 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 //
 // Android note: shadowColor/shadowOpacity/shadowRadius/shadowOffset are
 // iOS-only in RN. Android falls back to `elevation` (single gray shadow, no
-// color) via the elevation field already present on SHADOWS.neuDark/glow*.
+// color) via the elevation field on the theme's neuDark/glow shadows.
 // The dual colored shadow is an iOS-only effect — Android will look flatter.
 
-const GLOW_STYLES = {
-  coral: SHADOWS.glowCoral,
-  sage: SHADOWS.glowSage,
-  rose: SHADOWS.glowRose,
-  lavender: SHADOWS.glowLavender,
-  none: null,
-};
-
-const GRADIENT_BY_GLOW = {
-  coral: [COLORS.sage, COLORS.coral] as const,
-  sage: [COLORS.sageSoft, COLORS.sage] as const,
-  rose: [COLORS.blush, COLORS.rose] as const,
-  lavender: [COLORS.blushLight, COLORS.lavender] as const,
-};
-
-type GlowColor = keyof typeof GLOW_STYLES;
+type Fill = 'primary' | 'secondary' | 'none';
 
 type NeumorphicButtonProps = {
   onPress?: () => void;
@@ -49,17 +34,19 @@ type NeumorphicButtonProps = {
   icon?: React.ComponentProps<typeof Ionicons>['name'];
   children?: ReactNode;
   variant?: 'raised' | 'pill' | 'circular' | 'fab';
-  tone?: 'cream' | 'blushLight';
-  glow?: GlowColor;
+  fill?: Fill; // 'none' = plain surface-colored button
   size?: number; // fixed box size for circular/fab; ignored for raised/pill
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
 export default function NeumorphicButton({
-  onPress, label, icon, children, variant = 'raised', tone = 'cream',
-  glow = 'none', size, disabled = false, style,
+  onPress, label, icon, children, variant = 'raised',
+  fill = 'none', size, disabled = false, style,
 }: NeumorphicButtonProps) {
+  const { theme } = useTheme();
+  const { colors, shadows } = theme;
+  const styles = useStyles();
   const [pressed, setPressed] = useState(false);
   const scale = useSharedValue(1);
 
@@ -79,8 +66,8 @@ export default function NeumorphicButton({
   const isFixedSize = variant === 'circular' || variant === 'fab';
   const resolvedSize = size ?? (variant === 'fab' ? 56 : 44);
   const borderRadius = variant === 'pill' ? 999 : isFixedSize ? resolvedSize / 2 : RADII.md;
-  const useGradient = glow !== 'none';
-  const contentColor = useGradient ? '#FFFFFF' : COLORS.ink;
+  const backgroundColor = fill === 'primary' ? colors.primary : fill === 'secondary' ? colors.secondary : colors.glassStrong;
+  const contentColor = fill === 'primary' ? colors.onPrimary : fill === 'secondary' ? colors.onSecondary : colors.text;
 
   const outerStyle: ViewStyle = {
     borderRadius,
@@ -101,36 +88,24 @@ export default function NeumorphicButton({
       <Animated.View style={[outerStyle, animatedStyle]}>
         <View
           style={[
-            StyleSheet.absoluteFillObject, fillStyle, SHADOWS.neuDark,
+            StyleSheet.absoluteFill, fillStyle, shadows.neuDark,
             { opacity: pressed ? 0.35 : 1 },
           ]}
         />
         <View
           style={[
-            StyleSheet.absoluteFillObject, fillStyle, SHADOWS.neuLight,
+            StyleSheet.absoluteFill, fillStyle, shadows.neuLight,
             { opacity: pressed ? 0.3 : 1 },
           ]}
         />
-        {useGradient ? (
-          <LinearGradient
-            colors={GRADIENT_BY_GLOW[glow as Exclude<GlowColor, 'none'>]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[
-              StyleSheet.absoluteFillObject, fillStyle,
-              GLOW_STYLES[glow],
-              pressed && styles.pressedBorder,
-            ]}
-          />
-        ) : (
-          <View
-            style={[
-              StyleSheet.absoluteFillObject, fillStyle,
-              { backgroundColor: COLORS[tone] },
-              pressed && styles.pressedBorder,
-            ]}
-          />
-        )}
+        <View
+          style={[
+            StyleSheet.absoluteFill, fillStyle,
+            { backgroundColor },
+            fill === 'primary' && shadows.glow,
+            pressed && styles.pressedBorder,
+          ]}
+        />
         <View style={[styles.content, !isFixedSize && styles.contentPadded]}>
           {children ?? (
             <>
@@ -148,7 +123,7 @@ export default function NeumorphicButton({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(({ colors }) => ({
   content: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -164,9 +139,9 @@ const styles = StyleSheet.create({
   },
   pressedBorder: {
     borderWidth: 1,
-    borderColor: 'rgba(54,43,29,0.12)',
+    borderColor: colors.border,
   },
   disabled: {
     opacity: 0.5,
   },
-});
+}));

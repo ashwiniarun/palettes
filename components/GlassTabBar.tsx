@@ -1,12 +1,23 @@
-import GlassHighlight from '@/components/GlassHighlight';
-import { COLORS, SHADOWS, TAB_BAR_BASE_HEIGHT } from '@/lib/theme';
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { makeStyles, useTheme } from '@/lib/ThemeContext';
+import { TAB_BAR_BASE_HEIGHT } from '@/lib/theme';
 import { BlurView } from 'expo-blur';
-import { useEffect, useState } from 'react';
+import { Tabs } from 'expo-router';
+import { ComponentProps, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
-export default function GlassTabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
+// Derived from expo-router's own `Tabs` component rather than imported from
+// @react-navigation/bottom-tabs directly — expo-router vendors its own
+// internal fork of BottomTabBarProps for the `tabBar` render prop, which is
+// a structurally different (and not publicly exported) type from the
+// standalone @react-navigation/bottom-tabs package. Deriving it this way
+// always matches whatever expo-router actually expects, regardless of which
+// navigation library it forks internally.
+type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
+
+export default function GlassTabBar({ state, descriptors, emitter, navigateToTab, insets }: TabBarProps) {
+  const { theme } = useTheme();
+  const styles = useStyles();
   const [containerWidth, setContainerWidth] = useState(0);
   const tabWidth = containerWidth / state.routes.length;
   const indicatorX = useSharedValue(0);
@@ -29,29 +40,23 @@ export default function GlassTabBar({ state, descriptors, navigation, insets }: 
       <View style={styles.tint} />
       {containerWidth > 0 && (
         <Animated.View style={[styles.indicator, indicatorStyle]}>
-          <View style={styles.indicatorPill}>
-            <BlurView intensity={35} tint="light" style={StyleSheet.absoluteFill} />
-            <View style={styles.indicatorTint} />
-            <GlassHighlight />
-          </View>
+          <View style={styles.indicatorPill} />
         </Animated.View>
       )}
       <View style={styles.row}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const focused = state.index === index;
-          const color = focused ? COLORS.coral : COLORS.sage;
+          const color = focused ? theme.colors.onPrimary : theme.colors.icon;
 
           function onPress() {
-            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-            if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+            const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+            if (!focused && !event.defaultPrevented) navigateToTab(route.key);
           }
 
           return (
             <Pressable key={route.key} onPress={onPress} style={styles.tab}>
-              <View style={focused ? styles.iconGlow : undefined}>
-                {options.tabBarIcon?.({ focused, color, size: 22 })}
-              </View>
+              {options.tabBarIcon?.({ focused, color, size: 22 })}
             </Pressable>
           );
         })}
@@ -60,13 +65,13 @@ export default function GlassTabBar({ state, descriptors, navigation, insets }: 
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(({ colors, shadows }) => ({
   container: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
-    borderTopWidth: 1, borderTopColor: SHADOWS.glassBorder,
+    borderTopWidth: 1, borderTopColor: colors.glassEdge,
     overflow: 'hidden',
   },
-  tint: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(171,172,136,0.22)' },
+  tint: { ...StyleSheet.absoluteFill, backgroundColor: colors.glass },
   row: { flex: 1, flexDirection: 'row' },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   indicator: {
@@ -74,14 +79,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   indicatorPill: {
-    width: 40, height: 40, borderRadius: 20,
-    overflow: 'hidden',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.45)',
-    shadowColor: '#FFFFFF', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 },
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: colors.primary,
+    ...shadows.glow,
   },
-  indicatorTint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  iconGlow: { ...SHADOWS.glowCoral, borderRadius: 20 },
-});
+}));

@@ -1,19 +1,20 @@
+import AppBackground from '@/components/AppBackground';
 import GlassCard from '@/components/GlassCard';
 import { SerifText, Text } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
-import { COLORS, GLASS_TINTS, GRADIENTS, RADII } from '@/lib/theme';
+import { makeStyles, useColors } from '@/lib/ThemeContext';
+import { RADII } from '@/lib/theme';
 import { CATEGORY_ORDER, Category, ClosetItem } from '@/lib/types';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
-const ROW_TINTS: (keyof typeof GLASS_TINTS)[] = ['lavender', 'coral', 'sage', 'blush'];
-
 type RankRow = { cat: Category; item: ClosetItem };
 
 export default function RankingsScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const { id, handle } = useLocalSearchParams<{ id: string; handle?: string }>();
   const [rows, setRows] = useState<RankRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,12 +48,12 @@ export default function RankingsScreen() {
     return () => { active = false; };
   }, [id]));
 
-  if (loading) return <View style={styles.center}><ActivityIndicator color={COLORS.sage} /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;
 
   return (
     <View style={styles.screen}>
       <Stack.Screen options={{ title: handle ? `${handle}'s rankings` : 'your rankings' }} />
-      <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <AppBackground />
       <FlatList
         contentContainerStyle={{ padding: 16 }}
         data={rows}
@@ -64,7 +65,7 @@ export default function RankingsScreen() {
         }
         renderItem={({ item: { cat, item }, index }) => (
           <Animated.View entering={FadeInUp.delay(index * 40).springify()}>
-            <GlassCard tint={ROW_TINTS[index % ROW_TINTS.length]} glow={index === 0 ? 'lavender' : 'none'} radius="lg" padding={12} style={{ marginBottom: 10 }}>
+            <GlassCard glow={index === 0} radius="lg" padding={12} style={{ marginBottom: 10 }}>
               <View style={styles.row}>
                 <View style={[styles.swatch, { backgroundColor: item.color || item.product.default_color }]} />
                 <View style={styles.info}>
@@ -83,16 +84,16 @@ export default function RankingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
-  sectionTitle: { fontSize: 15, marginBottom: 10, color: COLORS.ink },
+const useStyles = makeStyles(({ colors }) => ({
+  screen: { flex: 1, backgroundColor: colors.bg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg },
+  sectionTitle: { fontSize: 15, marginBottom: 10, color: colors.text },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   swatch: { width: 40, height: 40, borderRadius: RADII.sm, flexShrink: 0 },
   info: { flex: 1, minWidth: 0 },
-  cat: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.4, color: COLORS.textSecondary, marginBottom: 2 },
-  name: { fontSize: 13, fontWeight: '600', color: COLORS.ink },
-  review: { fontSize: 11, color: COLORS.textSecondary, marginTop: 4 },
-  score: { fontSize: 15, fontWeight: '700', color: COLORS.ink, flexShrink: 0 },
-  empty: { textAlign: 'center', color: COLORS.textSecondary, padding: 40 },
-});
+  cat: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.4, color: colors.textMuted, marginBottom: 2 },
+  name: { fontSize: 13, fontWeight: '600', color: colors.text },
+  review: { fontSize: 11, color: colors.textMuted, marginTop: 4 },
+  score: { fontSize: 15, fontWeight: '700', color: colors.text, flexShrink: 0 },
+  empty: { textAlign: 'center', color: colors.textMuted, padding: 40 },
+}));

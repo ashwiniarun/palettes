@@ -1,23 +1,24 @@
+import AppBackground from '@/components/AppBackground';
 import GlassCard from '@/components/GlassCard';
 import NeumorphicButton from '@/components/NeumorphicButton';
 import Sheet from '@/components/Sheet';
 import { SerifText, Text, TextInput } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
 import { orIlike } from '@/lib/supabaseFilters';
-import { COLORS, GRADIENTS, RADII } from '@/lib/theme';
+import { makeStyles, useColors } from '@/lib/ThemeContext';
+import { RADII } from '@/lib/theme';
 import { CATEGORY_ORDER, ClosetItem, Dupe, normalizeUrl, Product, costPerWear } from '@/lib/types';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
     ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, View,
 } from 'react-native';
 
-const PLACEHOLDER = COLORS.inkSoft;
-
 type UsedInLook = { look_id: string; caption: string; poster_handle: string };
 
 export default function ProductDetailScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [item, setItem] = useState<ClosetItem | null>(null);
@@ -178,13 +179,13 @@ export default function ProductDetailScreen() {
     load();
   }
 
-  if (loading || !item) return <View style={styles.center}><ActivityIndicator color={COLORS.sage} /></View>;
+  if (loading || !item) return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;
 
   return (
     <View style={styles.screen}>
-      <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <AppBackground />
       <ScrollView contentContainerStyle={{ padding: 16 }}>
-        <GlassCard tint="blush" radius="lg" style={{ marginBottom: 16 }}>
+        <GlassCard radius="lg" style={{ marginBottom: 16 }}>
           <View style={styles.head}>
             <View style={[styles.swatch, { backgroundColor: item.color || item.product.default_color }]} />
             <View style={styles.headInfo}>
@@ -198,7 +199,7 @@ export default function ProductDetailScreen() {
           <NeumorphicButton
             label="buy this product"
             icon="cart-outline"
-            glow="coral"
+            fill="primary"
             onPress={() => Linking.openURL(item.product.link!)}
             style={{ marginBottom: 16 }}
           />
@@ -211,7 +212,7 @@ export default function ProductDetailScreen() {
             ) : (
               <View style={[styles.actionBtn, styles.emptyBadge]}><Text style={styles.emptyBadgeText}>marked empty</Text></View>
             )}
-            <NeumorphicButton label="edit" glow="sage" onPress={openEdit} style={{ flex: 1 }} />
+            <NeumorphicButton label="edit" fill="secondary" onPress={openEdit} style={{ flex: 1 }} />
             <NeumorphicButton
               onPress={confirmDelete}
               style={{ flex: 1 }}
@@ -221,7 +222,7 @@ export default function ProductDetailScreen() {
           </View>
         )}
 
-        <GlassCard tint="lavender" glow="lavender" radius="lg" style={{ marginBottom: 16 }}>
+        <GlassCard radius="lg" style={{ marginBottom: 16 }}>
           <SerifText style={styles.sectionTitle}>{isYours ? 'your rating' : 'rating'}</SerifText>
           {isYours ? (
             <>
@@ -235,12 +236,12 @@ export default function ProductDetailScreen() {
               <TextInput
                 style={styles.textarea}
                 placeholder="write a short review..."
-                placeholderTextColor={PLACEHOLDER}
+                placeholderTextColor={colors.textMuted}
                 value={review}
                 onChangeText={setReview}
                 multiline
               />
-              <NeumorphicButton label="save rating" glow="coral" onPress={saveRating} />
+              <NeumorphicButton label="save rating" fill="primary" onPress={saveRating} />
             </>
           ) : item.rating ? (
             <>
@@ -252,7 +253,7 @@ export default function ProductDetailScreen() {
           ) : <Text style={styles.emptyText}>not rated yet.</Text>}
         </GlassCard>
 
-        <GlassCard tint="sage" radius="lg" style={{ marginBottom: 16 }}>
+        <GlassCard radius="lg" style={{ marginBottom: 16 }}>
           <SerifText style={styles.sectionTitle}>{isYours ? "dupes you've logged" : 'logged dupes'}</SerifText>
           {dupes.length === 0 && <Text style={styles.emptyText}>{isYours ? "you haven't logged one yet." : 'no dupes logged.'}</Text>}
           {dupes.map(d => (
@@ -266,7 +267,7 @@ export default function ProductDetailScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="search a dupe brand or product..."
-                placeholderTextColor={PLACEHOLDER}
+                placeholderTextColor={colors.textMuted}
                 value={dupeQuery}
                 onChangeText={searchDupes}
               />
@@ -283,7 +284,7 @@ export default function ProductDetailScreen() {
         <SerifText style={styles.sectionTitle}>looks using this product</SerifText>
         {usedIn.length === 0 && <Text style={styles.emptyText}>no posted looks use this yet.</Text>}
         {usedIn.map(l => (
-          <GlassCard key={l.look_id} tint="coral" radius="md" padding={10} style={{ marginBottom: 8 }}>
+          <GlassCard key={l.look_id} radius="md" padding={10} style={{ marginBottom: 8 }}>
             <Text style={styles.usedInHandle}>{l.poster_handle}</Text>
             <Text style={styles.usedInCaption}>{l.caption}</Text>
           </GlassCard>
@@ -313,7 +314,7 @@ export default function ProductDetailScreen() {
                 key={cat}
                 variant="pill"
                 label={cat}
-                glow={editCategory === cat ? 'coral' : 'none'}
+                fill={editCategory === cat ? 'primary' : 'none'}
                 onPress={() => setEditCategory(cat)}
                 style={{ marginRight: 6, marginBottom: 6 }}
               />
@@ -324,7 +325,7 @@ export default function ProductDetailScreen() {
           <TextInput
             style={styles.input}
             placeholder="e.g. sephora.com/product/..."
-            placeholderTextColor={PLACEHOLDER}
+            placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
@@ -337,7 +338,7 @@ export default function ProductDetailScreen() {
 
           <NeumorphicButton
             label={savingEdit ? 'saving...' : 'save changes'}
-            glow="coral"
+            fill="primary"
             disabled={savingEdit}
             onPress={saveEdit}
             style={{ marginTop: 8 }}
@@ -349,43 +350,43 @@ export default function ProductDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
+const useStyles = makeStyles(({ colors }) => ({
+  screen: { flex: 1, backgroundColor: colors.bg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg },
   head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   swatch: { width: 48, height: 48, borderRadius: RADII.sm, flexShrink: 0 },
   headInfo: { flex: 1, minWidth: 0 },
-  title: { fontSize: 17, fontWeight: '700', flexShrink: 1, color: COLORS.ink },
-  sub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  title: { fontSize: 17, fontWeight: '700', flexShrink: 1, color: colors.text },
+  sub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   actionRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  actionBtn: { flex: 1, borderRadius: RADII.md, paddingVertical: 12, alignItems: 'center', backgroundColor: COLORS.cream },
-  deleteText: { fontSize: 13, fontWeight: '600', color: COLORS.danger },
-  emptyBadge: { backgroundColor: COLORS.oatLatte },
-  emptyBadgeText: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary },
-  sectionTitle: { fontSize: 14, marginBottom: 10, color: COLORS.ink },
+  actionBtn: { flex: 1, borderRadius: RADII.md, paddingVertical: 12, alignItems: 'center', backgroundColor: colors.glassStrong },
+  deleteText: { fontSize: 13, fontWeight: '600', color: colors.danger },
+  emptyBadge: { backgroundColor: colors.border },
+  emptyBadgeText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
+  sectionTitle: { fontSize: 14, marginBottom: 10, color: colors.text },
   starRow: { flexDirection: 'row', gap: 4, marginBottom: 10 },
-  star: { fontSize: 22, color: COLORS.oatLatte },
-  starFilled: { color: COLORS.ink },
+  star: { fontSize: 22, color: colors.border },
+  starFilled: { color: colors.text },
   textarea: {
-    borderRadius: RADII.md, padding: 10, minHeight: 60, backgroundColor: COLORS.cream, marginBottom: 10, color: COLORS.ink,
-    shadowColor: COLORS.sageDeep, shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: -2, height: -2 },
+    borderRadius: RADII.md, padding: 10, minHeight: 60, backgroundColor: colors.glassStrong, marginBottom: 10, color: colors.text,
+    shadowColor: colors.text, shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: -2, height: -2 },
   },
-  readOnly: { fontSize: 12, color: COLORS.textSecondary },
-  emptyText: { fontSize: 12, color: COLORS.textSecondary },
+  readOnly: { fontSize: 12, color: colors.textMuted },
+  emptyText: { fontSize: 12, color: colors.textMuted },
   dupeRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
-  dupeName: { fontSize: 12, flex: 1, color: COLORS.ink },
-  removeText: { fontSize: 11, color: COLORS.textSecondary },
+  dupeName: { fontSize: 12, flex: 1, color: colors.text },
+  removeText: { fontSize: 11, color: colors.textMuted },
   input: {
-    borderRadius: RADII.md, padding: 10, backgroundColor: COLORS.cream, marginTop: 8, color: COLORS.ink,
-    shadowColor: COLORS.sageDeep, shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: -2, height: -2 },
+    borderRadius: RADII.md, padding: 10, backgroundColor: colors.glassStrong, marginTop: 8, color: colors.text,
+    shadowColor: colors.text, shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: -2, height: -2 },
   },
-  dupeResultRow: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: COLORS.warmFog, borderRadius: RADII.sm, padding: 8, marginTop: 6 },
-  addText: { fontSize: 11, fontWeight: '700', color: COLORS.sageDeep },
-  usedInHandle: { fontSize: 12, fontWeight: '700', color: COLORS.ink },
-  usedInCaption: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
-  modalTitle: { fontSize: 18, marginBottom: 8, color: COLORS.ink },
-  editHint: { fontSize: 11, color: COLORS.textSecondary, marginBottom: 16 },
-  fieldLabel: { fontSize: 11, color: COLORS.textSecondary, marginBottom: 4, marginTop: 8 },
+  dupeResultRow: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: colors.bg, borderRadius: RADII.sm, padding: 8, marginTop: 6 },
+  addText: { fontSize: 11, fontWeight: '700', color: colors.text },
+  usedInHandle: { fontSize: 12, fontWeight: '700', color: colors.text },
+  usedInCaption: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  modalTitle: { fontSize: 18, marginBottom: 8, color: colors.text },
+  editHint: { fontSize: 11, color: colors.textMuted, marginBottom: 16 },
+  fieldLabel: { fontSize: 11, color: colors.textMuted, marginBottom: 4, marginTop: 8 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 4 },
-  cancelText: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 12, marginBottom: 20 },
-});
+  cancelText: { textAlign: 'center', color: colors.textMuted, marginTop: 12, marginBottom: 20 },
+}));

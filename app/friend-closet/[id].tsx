@@ -1,17 +1,18 @@
+import AppBackground from '@/components/AppBackground';
 import GlassCard from '@/components/GlassCard';
 import { SerifText, Text } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
-import { COLORS, GLASS_TINTS, GRADIENTS, RADII } from '@/lib/theme';
+import { makeStyles, useColors } from '@/lib/ThemeContext';
+import { RADII } from '@/lib/theme';
 import { CATEGORY_ORDER, ClosetItem, costPerWear } from '@/lib/types';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
-const ROW_TINTS: (keyof typeof GLASS_TINTS)[] = ['sage', 'coral', 'blush'];
-
 export default function FriendClosetScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [items, setItems] = useState<ClosetItem[]>([]);
@@ -35,11 +36,11 @@ export default function FriendClosetScreen() {
 
   const grouped = CATEGORY_ORDER.map(cat => ({ cat, items: items.filter(i => i.product.category === cat) })).filter(g => g.items.length > 0);
 
-  if (loading) return <View style={styles.center}><ActivityIndicator color={COLORS.sage} /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;
 
   return (
     <View style={styles.screen}>
-      <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <AppBackground />
       <FlatList
         contentContainerStyle={{ padding: 16 }}
         data={grouped}
@@ -51,7 +52,7 @@ export default function FriendClosetScreen() {
               <GlassCard
                 key={ci.id}
                 onPress={() => router.push(`/product/${ci.id}`)}
-                tint={ROW_TINTS[i % ROW_TINTS.length]}
+               
                 radius="md"
                 padding={12}
                 style={{ marginBottom: 8 }}
@@ -73,13 +74,13 @@ export default function FriendClosetScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
-  categoryTitle: { fontSize: 13, fontWeight: '700', color: COLORS.ink, marginBottom: 8, textTransform: 'uppercase' },
+const useStyles = makeStyles(({ colors }) => ({
+  screen: { flex: 1, backgroundColor: colors.bg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg },
+  categoryTitle: { fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 8, textTransform: 'uppercase' },
   itemInner: { flexDirection: 'row', alignItems: 'center' },
   swatch: { width: 36, height: 36, borderRadius: RADII.sm, marginRight: 12 },
-  itemName: { fontSize: 13, fontWeight: '600', color: COLORS.ink },
-  itemSub: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
-  empty: { textAlign: 'center', color: COLORS.textSecondary, padding: 40 },
-});
+  itemName: { fontSize: 13, fontWeight: '600', color: colors.text },
+  itemSub: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  empty: { textAlign: 'center', color: colors.textMuted, padding: 40 },
+}));

@@ -1,16 +1,15 @@
+import AppBackground from '@/components/AppBackground';
 import GlassCard from '@/components/GlassCard';
 import NeumorphicButton from '@/components/NeumorphicButton';
 import Sheet from '@/components/Sheet';
 import { SerifText, Text, TextInput } from '@/components/ThemedText';
 import { supabase } from '@/lib/supabase';
-import { COLORS, GRADIENTS, RADII } from '@/lib/theme';
+import { makeStyles, useColors } from '@/lib/ThemeContext';
+import { RADII } from '@/lib/theme';
 import { CATEGORY_ORDER, ClosetItem } from '@/lib/types';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-
-const PLACEHOLDER = COLORS.inkSoft;
 
 type LookDetail = {
   id: string; user_id: string; caption: string; photo_url: string;
@@ -19,6 +18,8 @@ type LookDetail = {
 };
 
 export default function LookDetailScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [look, setLook] = useState<LookDetail | null>(null);
@@ -66,11 +67,11 @@ export default function LookDetailScreen() {
     router.back();
   }
 
-  if (loading || !look) return <View style={styles.center}><ActivityIndicator color={COLORS.sage} /></View>;
+  if (loading || !look) return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;
 
   return (
     <View style={styles.screen}>
-      <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <AppBackground />
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Text style={styles.handle}>{look.poster.handle}</Text>
         <Text style={styles.caption}>{look.caption}</Text>
@@ -78,7 +79,7 @@ export default function LookDetailScreen() {
 
         {isYours && (
           <View style={styles.actionRow}>
-            <NeumorphicButton label="edit" glow="sage" onPress={() => setEditOpen(true)} style={{ flex: 1 }} />
+            <NeumorphicButton label="edit" fill="secondary" onPress={() => setEditOpen(true)} style={{ flex: 1 }} />
             <NeumorphicButton onPress={confirmDelete} style={{ flex: 1 }}>
               <Text style={styles.deleteText}>delete</Text>
             </NeumorphicButton>
@@ -87,7 +88,7 @@ export default function LookDetailScreen() {
 
         <SerifText style={styles.sectionTitle}>products used</SerifText>
         {look.look_products.map((lp, i) => (
-          <GlassCard key={i} tint={i % 2 === 0 ? 'sage' : 'coral'} radius="md" padding={10} style={{ marginBottom: 6 }}>
+          <GlassCard key={i} radius="md" padding={10} style={{ marginBottom: 6 }}>
             <View style={styles.productRow}>
               <Text style={styles.productName}>{lp.closet_item.product.brand} {lp.closet_item.product.name}</Text>
               {lp.closet_item.price ? <Text style={styles.productPrice}>${lp.closet_item.price}</Text> : null}
@@ -109,6 +110,8 @@ export default function LookDetailScreen() {
 function EditLookModal({ visible, look, onClose, onSaved }: {
   visible: boolean; look: LookDetail; onClose: () => void; onSaved: () => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const [caption, setCaption] = useState(look.caption);
   const [closetItems, setClosetItems] = useState<ClosetItem[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set(look.look_products.map(lp => lp.closet_item.id)));
@@ -165,7 +168,7 @@ function EditLookModal({ visible, look, onClose, onSaved }: {
         <TextInput
           style={styles.input}
           placeholder="caption this look..."
-          placeholderTextColor={PLACEHOLDER}
+          placeholderTextColor={colors.textMuted}
           value={caption}
           onChangeText={setCaption}
           multiline
@@ -174,7 +177,7 @@ function EditLookModal({ visible, look, onClose, onSaved }: {
         <Text style={styles.tagCount}>{selected.size} product{selected.size === 1 ? '' : 's'} tagged</Text>
 
         {loadingCloset ? (
-          <ActivityIndicator color={COLORS.sage} style={{ marginTop: 20 }} />
+          <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />
         ) : (
           CATEGORY_ORDER.map(cat => {
             const items = closetItems.filter(c => c.product.category === cat);
@@ -196,7 +199,7 @@ function EditLookModal({ visible, look, onClose, onSaved }: {
 
         <NeumorphicButton
           label={saving ? 'saving...' : 'save changes'}
-          glow="coral"
+          fill="primary"
           disabled={saving || !caption.trim() || selected.size === 0}
           onPress={handleSave}
           style={{ marginTop: 16 }}
@@ -207,29 +210,29 @@ function EditLookModal({ visible, look, onClose, onSaved }: {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
-  handle: { fontSize: 15, fontWeight: '700', color: COLORS.ink },
-  caption: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 12 },
-  photo: { width: '100%', aspectRatio: 1, borderRadius: RADII.lg, marginBottom: 16, backgroundColor: COLORS.blushLight },
+const useStyles = makeStyles(({ colors }) => ({
+  screen: { flex: 1, backgroundColor: colors.bg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg },
+  handle: { fontSize: 15, fontWeight: '700', color: colors.text },
+  caption: { fontSize: 13, color: colors.textMuted, marginBottom: 12 },
+  photo: { width: '100%', aspectRatio: 1, borderRadius: RADII.lg, marginBottom: 16, backgroundColor: colors.glass },
   actionRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  deleteText: { fontSize: 13, fontWeight: '600', color: COLORS.danger },
-  sectionTitle: { fontSize: 15, marginBottom: 10, color: COLORS.ink },
+  deleteText: { fontSize: 13, fontWeight: '600', color: colors.danger },
+  sectionTitle: { fontSize: 15, marginBottom: 10, color: colors.text },
   productRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  productName: { fontSize: 12, fontWeight: '600', flex: 1, color: COLORS.ink },
-  productPrice: { fontSize: 12, color: COLORS.textSecondary },
-  modalTitle: { fontSize: 18, marginBottom: 16, color: COLORS.ink },
+  productName: { fontSize: 12, fontWeight: '600', flex: 1, color: colors.text },
+  productPrice: { fontSize: 12, color: colors.textMuted },
+  modalTitle: { fontSize: 18, marginBottom: 16, color: colors.text },
   input: {
-    borderRadius: RADII.md, padding: 10, marginBottom: 12, backgroundColor: COLORS.cream, minHeight: 44, color: COLORS.ink,
-    shadowColor: COLORS.sageDeep, shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: -2, height: -2 },
+    borderRadius: RADII.md, padding: 10, marginBottom: 12, backgroundColor: colors.glassStrong, minHeight: 44, color: colors.text,
+    shadowColor: colors.text, shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: -2, height: -2 },
   },
-  tagCount: { fontSize: 11, color: COLORS.textSecondary, marginBottom: 8 },
-  catLabel: { fontSize: 11, fontWeight: '700', color: COLORS.sageDeep, textTransform: 'uppercase', marginTop: 10, marginBottom: 6 },
-  tagRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.cream, padding: 8, borderRadius: RADII.sm, marginBottom: 6 },
-  checkbox: { width: 16, height: 16, borderWidth: 1, borderColor: COLORS.border, borderRadius: 4 },
-  checkboxChecked: { backgroundColor: COLORS.coral, borderColor: COLORS.coral },
+  tagCount: { fontSize: 11, color: colors.textMuted, marginBottom: 8 },
+  catLabel: { fontSize: 11, fontWeight: '700', color: colors.text, textTransform: 'uppercase', marginTop: 10, marginBottom: 6 },
+  tagRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.glassStrong, padding: 8, borderRadius: RADII.sm, marginBottom: 6 },
+  checkbox: { width: 16, height: 16, borderWidth: 1, borderColor: colors.border, borderRadius: 4 },
+  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
   swatchSm: { width: 22, height: 22, borderRadius: 6 },
-  tagName: { fontSize: 12, flex: 1, color: COLORS.ink },
-  cancelText: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 12, marginBottom: 20 },
-});
+  tagName: { fontSize: 12, flex: 1, color: colors.text },
+  cancelText: { textAlign: 'center', color: colors.textMuted, marginTop: 12, marginBottom: 20 },
+}));

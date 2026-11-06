@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import AppBackground from '@/components/AppBackground';
 import BarcodeScannerModal from '@/components/BarcodeScannerModal';
 import GlassCard from '@/components/GlassCard';
 import NeumorphicButton from '@/components/NeumorphicButton';
@@ -7,9 +8,9 @@ import { SerifText, Text, TextInput } from '@/components/ThemedText';
 import { lookupBarcode } from '@/lib/barcodeLookup';
 import { supabase } from '@/lib/supabase';
 import { orIlike } from '@/lib/supabaseFilters';
-import { COLORS, GLASS_TINTS, GRADIENTS, RADII, TAB_BAR_BASE_HEIGHT } from '@/lib/theme';
+import { makeStyles, useColors } from '@/lib/ThemeContext';
+import { RADII, TAB_BAR_BASE_HEIGHT } from '@/lib/theme';
 import { CATEGORY_ORDER, ClosetItem, normalizeUrl, Product, costPerWear } from '@/lib/types';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -18,11 +19,9 @@ import {
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const ROW_TINTS: (keyof typeof GLASS_TINTS)[] = ['sage', 'coral', 'blush'];
-
-const PLACEHOLDER = COLORS.inkSoft;
-
 export default function ClosetScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<ClosetItem[]>([]);
@@ -53,12 +52,11 @@ export default function ClosetScreen() {
     .filter(g => g.items.length > 0);
   const emptyItems = items.filter(i => i.status === 'empty');
 
-  if (loading) return <View style={styles.center}><ActivityIndicator color={COLORS.sage} /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;
 
   return (
     <View style={styles.screen}>
-      <LinearGradient colors={GRADIENTS.vivid} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-
+      <AppBackground />
       <View style={styles.header}>
         <SerifText style={styles.title}>your closet</SerifText>
       </View>
@@ -71,22 +69,22 @@ export default function ClosetScreen() {
           <Animated.View entering={FadeInUp.delay(groupIndex * 40).springify()} style={{ marginBottom: 12 }}>
             <SerifText style={styles.categoryTitle}>{group.cat}</SerifText>
             {group.items.map((item, i) => (
-              <ClosetRow key={item.id} item={item} tint={ROW_TINTS[i % ROW_TINTS.length]} onPress={() => router.push(`/product/${item.id}`)} />
+              <ClosetRow key={item.id} item={item} onPress={() => router.push(`/product/${item.id}`)} />
             ))}
           </Animated.View>
         )}
         ListEmptyComponent={
-          grouped.length === 0 ? <Text style={styles.empty}>nothing in your closet yet — add your first product.</Text> : null
+          grouped.length === 0 ? <Text style={styles.empty}>nothing in your closet yet — add your first product.</Text> : undefined
         }
         ListFooterComponent={
           <View>
             <Pressable style={styles.toggleRow} onPress={() => setEmptyOpen(o => !o)}>
               <SerifText style={styles.sectionTitle}>empty products ({emptyItems.length})</SerifText>
-              <Ionicons name={emptyOpen ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.ink} />
+              <Ionicons name={emptyOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.text} />
             </Pressable>
             {emptyOpen && (
               emptyItems.length > 0 ? emptyItems.map((item, i) => (
-                <ClosetRow key={item.id} item={item} tint={ROW_TINTS[i % ROW_TINTS.length]} onPress={() => router.push(`/product/${item.id}`)} showEmptyPill />
+                <ClosetRow key={item.id} item={item} onPress={() => router.push(`/product/${item.id}`)} showEmptyPill />
               )) : <Text style={styles.empty}>nothing finished yet — log a product when you use it up.</Text>
             )}
           </View>
@@ -96,7 +94,7 @@ export default function ClosetScreen() {
       <NeumorphicButton
         variant="fab"
         icon="add"
-        glow="coral"
+        fill="primary"
         onPress={() => setAddOpen(true)}
         style={[styles.fab, { bottom: TAB_BAR_BASE_HEIGHT + Math.max(insets.bottom, 10) + 16 }]}
       />
@@ -110,11 +108,12 @@ export default function ClosetScreen() {
   );
 }
 
-function ClosetRow({ item, onPress, showEmptyPill, tint }: {
-  item: ClosetItem; onPress: () => void; showEmptyPill?: boolean; tint: keyof typeof GLASS_TINTS;
+function ClosetRow({ item, onPress, showEmptyPill}: {
+  item: ClosetItem; onPress: () => void; showEmptyPill?: boolean;
 }) {
+  const styles = useStyles();
   return (
-    <GlassCard onPress={onPress} tint={tint} radius="md" padding={12} style={styles.rowCard}>
+    <GlassCard onPress={onPress} radius="md" padding={12} style={styles.rowCard}>
       <View style={styles.rowContent}>
         <View style={[styles.swatch, { backgroundColor: item.color || item.product.default_color }]} />
         <View style={{ flex: 1 }}>
@@ -133,6 +132,8 @@ function ClosetRow({ item, onPress, showEmptyPill, tint }: {
 function AddProductModal({ visible, onClose, onAdded }: {
   visible: boolean; onClose: () => void; onAdded: () => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Product[]>([]);
   const [selected, setSelected] = useState<Product | null>(null);
@@ -249,20 +250,20 @@ function AddProductModal({ visible, onClose, onAdded }: {
           <TextInput
             style={[styles.input, { flex: 1, marginBottom: 0 }]}
             placeholder="search brand or product..."
-            placeholderTextColor={PLACEHOLDER}
+            placeholderTextColor={colors.textMuted}
             value={query}
             onChangeText={t => { setQuery(t); setSelected(null); setMatchedFromScan(false); }}
           />
           <NeumorphicButton
             variant="circular"
             icon="barcode-outline"
-            glow="sage"
+            fill="secondary"
             onPress={() => setScannerOpen(true)}
           />
         </View>
         {scanLoading && (
           <View style={styles.scanLoadingRow}>
-            <ActivityIndicator size="small" color={COLORS.sage} />
+            <ActivityIndicator size="small" color={colors.primary} />
             <Text style={styles.scanLoadingText}>looking up barcode...</Text>
           </View>
         )}
@@ -295,16 +296,16 @@ function AddProductModal({ visible, onClose, onAdded }: {
                 ? "couldn't find this barcode anywhere — add it as new:"
                 : 'no exact match — add it as new:'}
             </Text>
-            <TextInput style={styles.input} placeholder="brand" placeholderTextColor={PLACEHOLDER} value={newBrand} onChangeText={setNewBrand} />
-            <TextInput style={styles.input} placeholder="product name" placeholderTextColor={PLACEHOLDER} value={newName} onChangeText={setNewName} />
-            <TextInput style={styles.input} placeholder="shade (optional)" placeholderTextColor={PLACEHOLDER} value={newShade} onChangeText={setNewShade} />
+            <TextInput style={styles.input} placeholder="brand" placeholderTextColor={colors.textMuted} value={newBrand} onChangeText={setNewBrand} />
+            <TextInput style={styles.input} placeholder="product name" placeholderTextColor={colors.textMuted} value={newName} onChangeText={setNewName} />
+            <TextInput style={styles.input} placeholder="shade (optional)" placeholderTextColor={colors.textMuted} value={newShade} onChangeText={setNewShade} />
             <View style={styles.chipRow}>
               {CATEGORY_ORDER.map(cat => (
                 <NeumorphicButton
                   key={cat}
                   variant="pill"
                   label={cat}
-                  glow={newCategory === cat ? 'coral' : 'none'}
+                  fill={newCategory === cat ? 'primary' : 'none'}
                   onPress={() => setNewCategory(cat)}
                   style={{ marginRight: 6, marginBottom: 6 }}
                 />
@@ -314,7 +315,7 @@ function AddProductModal({ visible, onClose, onAdded }: {
             <TextInput
               style={styles.input}
               placeholder="e.g. sephora.com/product/..."
-              placeholderTextColor={PLACEHOLDER}
+              placeholderTextColor={colors.textMuted}
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="url"
@@ -327,7 +328,7 @@ function AddProductModal({ visible, onClose, onAdded }: {
         <TextInput
           style={styles.input}
           placeholder="price (optional)"
-          placeholderTextColor={PLACEHOLDER}
+          placeholderTextColor={colors.textMuted}
           keyboardType="decimal-pad"
           value={price}
           onChangeText={setPrice}
@@ -335,7 +336,7 @@ function AddProductModal({ visible, onClose, onAdded }: {
 
         <NeumorphicButton
           label={saving ? 'adding...' : 'add to closet'}
-          glow="coral"
+          fill="primary"
           disabled={saving || (!selected && (!newBrand.trim() || !newName.trim()))}
           onPress={handleAdd}
           style={{ marginTop: 8 }}
@@ -353,37 +354,37 @@ function AddProductModal({ visible, onClose, onAdded }: {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
+const useStyles = makeStyles(({ colors }) => ({
+  screen: { flex: 1, backgroundColor: colors.bg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg },
   header: { padding: 16, paddingBottom: 0 },
-  title: { fontSize: 20, color: COLORS.ink },
-  categoryTitle: { fontSize: 13, fontWeight: '700', color: COLORS.ink, marginBottom: 8, textTransform: 'uppercase' },
+  title: { fontSize: 20, color: colors.text },
+  categoryTitle: { fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 8, textTransform: 'uppercase' },
   rowCard: { marginBottom: 10 },
   rowContent: { flexDirection: 'row', alignItems: 'center' },
   swatch: { width: 36, height: 36, borderRadius: RADII.sm, marginRight: 12 },
-  itemName: { fontSize: 13, fontWeight: '600', color: COLORS.ink },
-  itemSub: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
-  empty: { textAlign: 'center', color: COLORS.textSecondary, padding: 40 },
+  itemName: { fontSize: 13, fontWeight: '600', color: colors.text },
+  itemSub: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  empty: { textAlign: 'center', color: colors.textMuted, padding: 40 },
   toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 8 },
-  sectionTitle: { fontSize: 15, color: COLORS.ink },
-  emptyPill: { backgroundColor: COLORS.oatLatte, borderRadius: 20, paddingVertical: 3, paddingHorizontal: 8, flexShrink: 0 },
-  emptyPillText: { fontSize: 10, fontWeight: '600', color: COLORS.textSecondary },
+  sectionTitle: { fontSize: 15, color: colors.text },
+  emptyPill: { backgroundColor: colors.border, borderRadius: 20, paddingVertical: 3, paddingHorizontal: 8, flexShrink: 0 },
+  emptyPillText: { fontSize: 10, fontWeight: '600', color: colors.textMuted },
   fab: { position: 'absolute', right: 20 },
-  modalTitle: { fontSize: 18, marginBottom: 16, color: COLORS.ink },
+  modalTitle: { fontSize: 18, marginBottom: 16, color: colors.text },
   input: {
-    borderRadius: RADII.md, padding: 10, marginBottom: 8, backgroundColor: COLORS.cream, color: COLORS.ink,
-    shadowColor: COLORS.sageDeep, shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: -2, height: -2 },
+    borderRadius: RADII.md, padding: 10, marginBottom: 8, backgroundColor: colors.glassStrong, color: colors.text,
+    shadowColor: colors.text, shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: -2, height: -2 },
   },
   searchRow: { flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 8 },
   scanLoadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  scanLoadingText: { fontSize: 11, color: COLORS.textSecondary, marginBottom: 8 },
-  matchBanner: { backgroundColor: COLORS.blushLight, borderRadius: RADII.sm, padding: 10, marginBottom: 8 },
-  matchBannerText: { fontSize: 11, color: COLORS.rose },
-  resultRow: { flexDirection: 'row', justifyContent: 'space-between', padding: 10, backgroundColor: COLORS.cream, borderRadius: RADII.sm, marginBottom: 4 },
-  resultCategory: { color: COLORS.textSecondary, fontSize: 11 },
+  scanLoadingText: { fontSize: 11, color: colors.textMuted, marginBottom: 8 },
+  matchBanner: { backgroundColor: colors.glass, borderRadius: RADII.sm, padding: 10, marginBottom: 8 },
+  matchBannerText: { fontSize: 11, color: colors.danger },
+  resultRow: { flexDirection: 'row', justifyContent: 'space-between', padding: 10, backgroundColor: colors.glassStrong, borderRadius: RADII.sm, marginBottom: 4 },
+  resultCategory: { color: colors.textMuted, fontSize: 11 },
   newProductBox: { marginBottom: 8 },
-  newProductLabel: { fontSize: 11, color: COLORS.textSecondary, marginBottom: 6 },
+  newProductLabel: { fontSize: 11, color: colors.textMuted, marginBottom: 6 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 4 },
-  cancelText: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 12, marginBottom: 20 },
-});
+  cancelText: { textAlign: 'center', color: colors.textMuted, marginTop: 12, marginBottom: 20 },
+}));
